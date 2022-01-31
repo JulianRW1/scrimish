@@ -1,7 +1,7 @@
-from enum import Flag
+from enum import Enum
 
 
-class CardType(Flag):
+class CardType(Enum):
     DAGGER = 1
     SWORD = 2
     MORNING_STAR = 3
@@ -13,4 +13,10 @@ class CardType(Flag):
     SHIELD = 8
     CROWN = 9
 
-    standard_card = DAGGER | SWORD | MORNING_STAR | WAR_AXE | HALBERD | LONGSWORD
+    def is_standard(card_type):
+        return (card_type == CardType.DAGGER or 
+                card_type == CardType.SWORD or 
+                card_type == CardType.MORNING_STAR or 
+                card_type == CardType.WAR_AXE or
+                card_type == CardType.HALBERD or 
+                card_type == CardType.LONGSWORD)

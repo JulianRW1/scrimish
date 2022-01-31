@@ -1,15 +1,18 @@
-
+import constants
+from realm import Realm
 
 
 class Player:
 
-    realm = []
+    realm = None
 
-    def __init__(self, alliance, realm_size):
+    def __init__(self, alliance, realm):
         self.alliance = alliance
         
-        for i in range(realm_size):
-            self.realm.append([])
+        if (realm == None):
+            realm = Realm(constants.REALM_SIZE)
+        else:
+            self.realm = Realm(realm)
 
 
     def make_move(self, card_used, target):
