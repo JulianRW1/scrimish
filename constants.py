@@ -1,10 +1,13 @@
 from alliance import Alliance
-from cards import card_methods
 from cards.card_factory import CardFactory
 from cards.card_type import CardType
 
 
-REALM_SIZE = 5
+STANDARD_REALM_SIZE = 5
+STANDARD_PILE_SIZE = 5
+
+TOP_PILE_INDEX = -1
+BOTTOM_PILE_INDEX = 0
 
 
 def get_standard_card_set(alliance: Alliance):
@@ -21,13 +24,21 @@ def get_standard_card_set(alliance: Alliance):
         CardType.CROWN: 1
     }
 
-    card_set = []
+    standard_cards = []
     
     for type in standard_cards_quantities:
         for i in range(standard_cards_quantities[type]):
-            card_set.append(CardFactory.make_card(alliance, type))
+            standard_cards.append(CardFactory.make_card(alliance, type))
+    
+    # Turn the standard card array into a 2D array
+    card_set_2D = []
+    for pile in range(STANDARD_REALM_SIZE):
+        card_set_2D.append([])
+        for index in range(STANDARD_PILE_SIZE):
+            # loop through the piles
+            card_set_2D[pile].append(standard_cards[(pile * 5) + index])
 
-    return card_set
+    return card_set_2D
 
 
 RED_STANDARD_CARD_SET = get_standard_card_set(Alliance.RED)

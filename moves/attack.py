@@ -1,23 +1,30 @@
 from cards.card_type import CardType
-from cards.card import Card
+import constants
 from moves.attack_result import AttackResult
+from realm import Realm
 
 
 class Attack:
 
-    attacker = None
-    defender = None
+    attacker_realm = None
+    attack_pile = 100
 
-    def __init__(self, attacker: Card, defender: Card):
-        self.attacker = attacker
-        self.defender = defender
+    defender_realm = None
+    defense_pile = 100
+
+    def __init__(self, attacker_realm: Realm, defender_realm: Realm, attack_pile: int, defense_pile: int):
+        self.attacker_realm = attacker_realm
+        self.attack_pile = attack_pile
+
+        self.defender_realm = defender_realm
+        self.defense_pile = defense_pile
 
     
     # Returns the winner of the attack
     # Returns and
     def resolve_attack(self) -> AttackResult:
-        atk_type = self.attacker.card_type
-        def_type = self.defender.card_type
+        atk_type = self.attacker_realm.get(self.attack_pile, constants.TOP_PILE_INDEX).card_type
+        def_type = self.defender_realm.get(self.defense_pile, constants.TOP_PILE_INDEX).card_type
 
         if CardType.is_standard(atk_type):
 
