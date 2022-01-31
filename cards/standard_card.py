@@ -1,11 +1,9 @@
-from card import Card
+from cards.card import Card
+
 
 class StandardCard(Card):
 
-    def __init__(self, strength, alliance):
-        super().__init__(alliance)
-        
-        self.strength = strength
+    def __init__(self, alliance, card_type):
+        super().__init__(alliance, card_type)
 
-
-    
+        self.strength = card_type.value

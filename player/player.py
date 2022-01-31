@@ -12,4 +12,5 @@ class Player:
             self.realm.append([])
 
 
-    
+    def make_move(self, card_used, target):
+        pass

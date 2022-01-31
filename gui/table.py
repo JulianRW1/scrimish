@@ -2,8 +2,11 @@ from tkinter import *
 
 root = Tk()
 
-label = Label(root, text="Hello World!")
+def myClick():
+    myLabel = Label(root, text='You Clicked!')
+    myLabel.pack()
 
-label.pack()
+mybutton = Button(root, text='click me!', command=myClick)
+mybutton.pack()
 
 root.mainloop()
