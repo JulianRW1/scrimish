@@ -1,3 +1,4 @@
+from alliance import Alliance
 from cards.card_type import CardType
 
 
@@ -6,7 +7,7 @@ class Card:
     alliance = None
     card_type = None
 
-    def __init__(self, card_alliance, card_type):
+    def __init__(self, card_alliance: Alliance, card_type: CardType):
         self.alliance = card_alliance
         self.card_type = card_type
 

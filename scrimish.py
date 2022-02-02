@@ -2,23 +2,11 @@ import constants
 from cards.card_factory import CardFactory
 from cards.card_type import CardType
 from alliance import Alliance
+from gui.table import Table
 from moves.attack import Attack
 from player.player import Player
 from realm import Realm
 
-
-realm = Realm(constants.BLUE_STANDARD_CARD_SET.copy())
-
-realm.shuffle()
-realm.bury_crown()
-
-test_card = CardFactory.make_card(Alliance.RED, CardType.HALBERD)
-
-print(f'''
-Alliance: {test_card.alliance}
-CardType: {test_card.card_type}
-Strength: {test_card.strength}
-''')
 
 # attack tests
 blue_player = Player(Alliance.BLUE)
@@ -47,3 +35,5 @@ red_player.realm.print()
 # attack = Attack(attacker_realm=blue_player.realm, defender_realm=red_player.realm, attack_pile=0, defense_pile=0)
 # result = attack.resolve_attack()
 # print(result)
+
+Table().set_up()
