@@ -9,6 +9,8 @@ STANDARD_PILE_SIZE = 5
 TOP_PILE_INDEX = -1
 BOTTOM_PILE_INDEX = 0
 
+CARD_SCALE = 50
+
 
 def get_standard_card_set(alliance: Alliance):
 

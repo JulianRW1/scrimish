@@ -50,7 +50,7 @@ class Realm():
                 all_cards.append(card)
 
         for pile in self._data:
-            for card in range(len(self._data) - 1):
+            for card in range(len(self._data)):
                 rand_card = random.Random().choice(all_cards)
                 all_cards.remove(rand_card)
                 pile[card] = rand_card

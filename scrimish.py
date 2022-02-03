@@ -17,7 +17,7 @@ blue_player.realm.print()
 print('Red Realm')
 red_player.realm.print()
 
-losers = red_player.make_attack(blue_player.realm, attacker_pile=0, defender_pile= 1)
+losers = blue_player.make_attack(red_player.realm, attacker_pile=0, defender_pile= 0)
 
 if (isinstance(losers, tuple)):
     for card in losers:
@@ -36,4 +36,4 @@ red_player.realm.print()
 # result = attack.resolve_attack()
 # print(result)
 
-Table().set_up()
+Table().set_up(blue_player, red_player)
