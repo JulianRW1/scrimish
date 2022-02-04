@@ -41,6 +41,14 @@ class Realm():
     def get(self, pile: int, index: int) -> Card:
         return self._data[pile][index]
 
+    def get_pile(self, target_card: Card) -> int:
+        for pile_index in range(len(self._data)):
+            for card in self._data[pile_index]:
+                if card == target_card:
+                    return pile_index
+        return -1
+
+
     def shuffle(self):
         all_cards = []
 

@@ -36,4 +36,4 @@ red_player.realm.print()
 # result = attack.resolve_attack()
 # print(result)
 
-Table().set_up(blue_player, red_player)
+Table(blue_player, red_player).set_up()
