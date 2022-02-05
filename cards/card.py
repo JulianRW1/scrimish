@@ -44,5 +44,4 @@ class Card:
             file_name += 'crown'
         
         file_name += '.png'
-        print(self.to_string() + ': ' + file_name)
         return file_name

@@ -10,9 +10,6 @@ import constants
 
 class Table:
 
-    primary_player_color = ''
-    secondary_player_color = ''
-
     primary_player = None
     secondary_player = None
 
@@ -21,121 +18,142 @@ class Table:
     selected_card = None
     selected_canvas = None
 
-    primary_canvases = []
-    secondary_canvases = []
+    primary_canvases = [None]*5
+    secondary_canvases = [None]*5
+
+    primary_pile_images = [None]*5
+    secondary_pile_imgs = [None]*5
+
+    card_width = 0
+    card_height = 0
+    
+    primary_frame = None
+    secondary_frame = None
 
     def __init__(self, primary_player: Player, secondary_player: Player) -> None:
         self.primary_player = primary_player
         self.secondary_player = secondary_player
 
-        if self.primary_player.alliance == Alliance.RED:
-            self.primary_player_color = 'RED'
-            self.secondary_player_color = 'BLUE'
-        else:
-            self.primary_player_color = 'BLUE'
-            self.secondary_player_color = 'RED'
+        self.card_width = int(2.5 * constants.CARD_SCALE)
+        self.card_height = int(3.5 * constants.CARD_SCALE)
 
 
+    # Handle user clicks on cards
     def card_clicked(self, canvas: Canvas, card: Card):
+        card_selected_color = 'YELLOW'
+
+        # Set active player
+        active_player = None
+        inactive_player = None
         if self.is_primary_players_turn:
+            active_player = self.primary_player
+            inactive_player = self.secondary_player
+        else:
+            active_player = self.secondary_player
+            inactive_player = self.primary_player
+        
+        if card != None: # If there is a card on the clicked square
             if self.selected_card == None:  
                 # No previosly selected cards
-                if card.alliance == self.primary_player.alliance:
-                    # selected card is on alliance
+                if card.alliance == active_player.alliance:
+                    # card clicked is on own alliance
 
-                    # selt the selected card
-                    canvas.configure(bg='YELLOW')
+                    # select the clicked card
+                    canvas.configure(bg=card_selected_color)
                     self.selected_card = card
                     self.selected_canvas = canvas
-            elif card.alliance != self.primary_player.alliance:
-                # Card is opponents card
-                canvas.configure(bg='YELLOW')
 
-                attacker_pile = self.primary_player.realm.get_pile(self.selected_card)
-                defender_pile = self.secondary_player.realm.get_pile(card)
-                losers = self.primary_player.make_attack(self.secondary_player.realm, attacker_pile, defender_pile)
-                # TODO: redisplay cards after attack
+            elif card.alliance != active_player.alliance: # Card is opponents card
+                canvas.configure(bg=card_selected_color)
+
+                # Make attack
+                attacker_pile = active_player.realm.get_pile(self.selected_card)
+                defender_pile = inactive_player.realm.get_pile(card)
+                active_player.make_attack(inactive_player.realm, attacker_pile, defender_pile)
+
+                # Reset display
+                self.selected_card = None
+                self.selected_canvas = None
+                self.remove_images()
+                self.display_cards()
+
+                # pass turn
+                self.is_primary_players_turn = not self.is_primary_players_turn
 
             elif card == self.selected_card:
                 # card is already selected card
-                canvas.configure(bg=self.primary_player_color)
+                canvas.configure(bg=active_player.color)
                 self.selected_canvas = None
                 self.selected_card = None
             else:
                 # Card is own card
 
                 # Switch selected card
-                self.selected_canvas.configure(bg=self.primary_player_color)
-                canvas.configure(bg='YELLOW')
+                self.selected_canvas.configure(bg=active_player.color)
+                canvas.configure(bg=card_selected_color)
                 self.selected_card = card
                 self.selected_canvas = canvas
-                
+
+
+    # Remove all images from 
+    def remove_images(self):
+        for i in range(constants.STANDARD_REALM_SIZE):
+            self.primary_canvases[i].delete('all')
+            self.secondary_canvases[i].delete('all')
+
+
+    def display_cards(self):
+
+        # Loop through the piles
+        for i in range(constants.STANDARD_REALM_SIZE):
+            if self.secondary_player.realm.get_top(pile=i) != None:
+                # Destroy the canvas if it is already displayed
+                if self.secondary_canvases[i] != None:
+                    self.secondary_canvases[i].destroy()
+                    
+                # Set up secondary player area
+                self.secondary_pile_imgs[i] = Table.resize_image(Image.open(self.secondary_player.realm.get_top(pile=i).get_image_path()), self.card_width, self.card_height),
+                self.secondary_canvases[i] = self.set_up_canvas(self.secondary_frame, self.card_width, self.card_height, image=self.secondary_pile_imgs[i], bg=self.secondary_player.color, grid_row=0, grid_column=i);
+            
+            if self.primary_player.realm.get_top(pile=i) != None:
+                # Destroy the canvas already displayed
+                if self.primary_canvases[i] != None:
+                    self.primary_canvases[i].destroy()
+                    
+                # Set up primary player area
+                self.primary_pile_images[i] = Table.resize_image(Image.open(self.primary_player.realm.get_top(pile=i).get_image_path()), self.card_width, self.card_height)
+                self.primary_canvases[i] = self.set_up_canvas(self.primary_frame, self.card_width, self.card_height, image=self.primary_pile_images[i], bg=self.primary_player.color, grid_row=0, grid_column=i)
+
+        self.bind_buttons_to_canvas()
+
 
     def set_up(self):
         root = Tk()
         root.title('Scrimish')
         root.configure(bg='brown')
 
-
         # Configure frames
-        primary_frame = None
-        secondary_frame = None
+        self.primary_frame = LabelFrame(root, text=self.primary_player.color, bg=self.primary_player.color)
+        self.secondary_frame = LabelFrame(root, text=self.secondary_player.color, bg=self.secondary_player.color)
 
-        primary_frame = LabelFrame(root, text=self.primary_player_color, bg=self.primary_player_color)
-        secondary_frame = LabelFrame(root, text=self.secondary_player_color, bg=self.secondary_player_color)
-        
+        self.display_cards()
 
-        card_width = int(2.5 * constants.CARD_SCALE)
-        card_height = int(3.5 * constants.CARD_SCALE)
+        self.secondary_frame.pack()
+        self.primary_frame.pack()
+        root.mainloop()
 
-        secondary_pile_imgs = [
-            Table.resize_image(Image.open(self.secondary_player.realm.get(0, constants.TOP_PILE_INDEX).get_image_path()), card_width, card_height),
-            Table.resize_image(Image.open(self.secondary_player.realm.get(1, constants.TOP_PILE_INDEX).get_image_path()), card_width, card_height),
-            Table.resize_image(Image.open(self.secondary_player.realm.get(2, constants.TOP_PILE_INDEX).get_image_path()), card_width, card_height),
-            Table.resize_image(Image.open(self.secondary_player.realm.get(3, constants.TOP_PILE_INDEX).get_image_path()), card_width, card_height),
-            Table.resize_image(Image.open(self.secondary_player.realm.get(4, constants.TOP_PILE_INDEX).get_image_path()), card_width, card_height)
-        ]
-
-        self.secondary_canvases = [
-            self.set_up_canvas(secondary_frame, card_width, card_height, image=secondary_pile_imgs[0], bg=self.secondary_player_color, grid_row=0, grid_column=0),
-            self.set_up_canvas(secondary_frame, card_width, card_height, image=secondary_pile_imgs[1], bg=self.secondary_player_color, grid_row=0, grid_column=1),
-            self.set_up_canvas(secondary_frame, card_width, card_height, image=secondary_pile_imgs[2], bg=self.secondary_player_color, grid_row=0, grid_column=2),
-            self.set_up_canvas(secondary_frame, card_width, card_height, image=secondary_pile_imgs[3], bg=self.secondary_player_color, grid_row=0, grid_column=3),
-            self.set_up_canvas(secondary_frame, card_width, card_height, image=secondary_pile_imgs[4], bg=self.secondary_player_color, grid_row=0, grid_column=4)
-        ]
-        
-        primary_pile_images = [
-            Table.resize_image(Image.open(self.primary_player.realm.get(0, constants.TOP_PILE_INDEX).get_image_path()), card_width, card_height),
-            Table.resize_image(Image.open(self.primary_player.realm.get(1, constants.TOP_PILE_INDEX).get_image_path()), card_width, card_height),
-            Table.resize_image(Image.open(self.primary_player.realm.get(2, constants.TOP_PILE_INDEX).get_image_path()), card_width, card_height),
-            Table.resize_image(Image.open(self.primary_player.realm.get(3, constants.TOP_PILE_INDEX).get_image_path()), card_width, card_height),
-            Table.resize_image(Image.open(self.primary_player.realm.get(4, constants.TOP_PILE_INDEX).get_image_path()), card_width, card_height)
-        ]
-
-        self.primary_canvases = [
-            self.set_up_canvas(primary_frame, card_width, card_height, image=primary_pile_images[0], bg=self.primary_player_color, grid_row=0, grid_column=0),
-            self.set_up_canvas(primary_frame, card_width, card_height, image=primary_pile_images[1], bg=self.primary_player_color, grid_row=0, grid_column=1),
-            self.set_up_canvas(primary_frame, card_width, card_height, image=primary_pile_images[2], bg=self.primary_player_color, grid_row=0, grid_column=2),
-            self.set_up_canvas(primary_frame, card_width, card_height, image=primary_pile_images[3], bg=self.primary_player_color, grid_row=0, grid_column=3),
-            self.set_up_canvas(primary_frame, card_width, card_height, image=primary_pile_images[4], bg=self.primary_player_color, grid_row=0, grid_column=4)
-        ]
-
+    def bind_buttons_to_canvas(self):
         for i in range(len(self.primary_canvases)):
             self.primary_canvases[i].bind('<Button-1>', 
                                 lambda event, 
                                 canvas = self.primary_canvases[i],
-                                card = self.primary_player.realm.get(pile=i, index=constants.TOP_PILE_INDEX): 
+                                card = self.primary_player.realm.get_top(pile=i): 
                                 Table.card_clicked(self, canvas, card))
             self.secondary_canvases[i].bind('<Button-1>', 
                                 lambda event, 
                                 canvas = self.secondary_canvases[i],
-                                card = self.secondary_player.realm.get(pile=i, index=constants.TOP_PILE_INDEX): 
+                                card = self.secondary_player.realm.get_top(pile=i): 
                                 Table.card_clicked(self, canvas, card))
-
-        secondary_frame.pack()
-        primary_frame.pack()
-
-        root.mainloop()
 
     def set_up_canvas(self, master, width, height, image, bg, grid_row, grid_column):
         canvas = Canvas(master, width=width + 5, height=height + 5, bg=bg)

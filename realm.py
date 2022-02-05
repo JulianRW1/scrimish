@@ -39,7 +39,18 @@ class Realm():
         return top
     
     def get(self, pile: int, index: int) -> Card:
-        return self._data[pile][index]
+        if index < len(self._data[pile]):
+            return self._data[pile][index]
+        else:
+            return None
+    
+
+    def get_top(self, pile: int) -> Card:
+        if self._data[pile] != []:
+            return self._data[pile][-1]
+        else:
+            return None
+
 
     def get_pile(self, target_card: Card) -> int:
         for pile_index in range(len(self._data)):
