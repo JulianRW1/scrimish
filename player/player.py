@@ -8,11 +8,17 @@ from realm import Realm
 class Player:
 
     realm = None
+    color = ''
 
     def __init__(self, alliance, realm=None):
         self.alliance = alliance
+
+        if alliance == Alliance.BLUE:
+            self.color = 'Blue'
+        elif alliance == Alliance.RED:
+            self.color = 'Red'
         
-        if (realm == None):
+        if realm == None:
             if alliance == Alliance.BLUE:
                 self.realm = Realm(constants.BLUE_STANDARD_CARD_SET.copy())
             elif alliance == Alliance.RED:
@@ -32,13 +38,12 @@ class Player:
         losing_cards = ()
 
         if attack_result == AttackResult.ATTACKER_WINS:
-            losing_cards = (defender_realm.remove_top(defender_pile))
+            losing_cards = [defender_realm.remove_top(defender_pile)]
         elif attack_result == AttackResult.DEFENDER_WINS:
-            losing_cards = (self.realm.remove_top(attacker_pile))
+            losing_cards = [self.realm.remove_top(attacker_pile)]
         elif attack_result == AttackResult.BOTH_LOSE:
-            losing_cards = (self.realm.remove_top(attacker_pile), defender_realm.remove_top(defender_pile))
+            losing_cards = [self.realm.remove_top(attacker_pile), defender_realm.remove_top(defender_pile)]
         elif attack_result == AttackResult.BOTH_SURVIVE:
-            losing_cards = None
+            losing_cards = []
         
         return losing_cards
-

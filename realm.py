@@ -39,7 +39,26 @@ class Realm():
         return top
     
     def get(self, pile: int, index: int) -> Card:
-        return self._data[pile][index]
+        if index < len(self._data[pile]):
+            return self._data[pile][index]
+        else:
+            return None
+    
+
+    def get_top(self, pile: int) -> Card:
+        if len(self._data[pile]) > 0:
+            return self._data[pile][-1]
+        else:
+            return None
+
+
+    def get_pile(self, target_card: Card) -> int:
+        for pile_index in range(len(self._data)):
+            for card in self._data[pile_index]:
+                if card == target_card:
+                    return pile_index
+        return -1
+
 
     def shuffle(self):
         all_cards = []
@@ -66,8 +85,8 @@ class Realm():
                 if pile[card].card_type == CardType.CROWN:
                     crown_pile = pile
                     crown_index = card
-        
-        if crown_index != len(crown_pile) - 1:
+
+        if crown_index != constants.BOTTOM_PILE_INDEX:
             #swap crown with last card in crown pile
             temp = crown_pile[constants.BOTTOM_PILE_INDEX]
             crown_pile[constants.BOTTOM_PILE_INDEX] = crown_pile[crown_index]
