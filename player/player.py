@@ -14,9 +14,9 @@ class Player:
         self.alliance = alliance
 
         if alliance == Alliance.BLUE:
-            self.color = 'BLUE'
+            self.color = 'Blue'
         elif alliance == Alliance.RED:
-            self.color = 'RED'
+            self.color = 'Red'
         
         if realm == None:
             if alliance == Alliance.BLUE:
@@ -47,4 +47,3 @@ class Player:
             losing_cards = []
         
         return losing_cards
-

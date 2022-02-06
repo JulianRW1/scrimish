@@ -1,5 +1,6 @@
 from PIL import Image
 from alliance import Alliance
+import alliance
 from cards.card_type import CardType
 
 
@@ -45,3 +46,12 @@ class Card:
         
         file_name += '.png'
         return file_name
+
+    def get_bg_image_path(self):
+        
+        if self.alliance == Alliance.RED:
+            return 'images/red_card_back.png'
+        elif self.alliance == Alliance.BLUE:
+            return 'images/blue_card_back.png'
+        else:
+            return ''

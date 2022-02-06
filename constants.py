@@ -11,6 +11,10 @@ BOTTOM_PILE_INDEX = 0
 
 CARD_SCALE = 50
 
+DESTROYED_CARD_DELAY = 1.5
+
+WINNER_DELAY = 1.0
+
 
 def get_standard_card_set(alliance: Alliance):
 

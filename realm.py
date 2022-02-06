@@ -46,7 +46,7 @@ class Realm():
     
 
     def get_top(self, pile: int) -> Card:
-        if self._data[pile] != []:
+        if len(self._data[pile]) > 0:
             return self._data[pile][-1]
         else:
             return None
@@ -85,8 +85,8 @@ class Realm():
                 if pile[card].card_type == CardType.CROWN:
                     crown_pile = pile
                     crown_index = card
-        
-        if crown_index != len(crown_pile) - 1:
+
+        if crown_index != constants.BOTTOM_PILE_INDEX:
             #swap crown with last card in crown pile
             temp = crown_pile[constants.BOTTOM_PILE_INDEX]
             crown_pile[constants.BOTTOM_PILE_INDEX] = crown_pile[crown_index]
