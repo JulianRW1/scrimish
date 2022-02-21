@@ -1,7 +1,7 @@
 var websocket;
 
-
 const IMAGE_SCALE = 50;
+
 
 window.addEventListener("DOMContentLoaded", () => {
     // Initialize the UI
@@ -10,10 +10,15 @@ window.addEventListener("DOMContentLoaded", () => {
 
     // Open WebSocket connection and register event handlers
     websocket = new WebSocket("ws://192.168.1.17:8001/"); 
-    recieveMoves(board, websocket);
-    sendMoves(board, websocket);
+
+    recieveEvents(websocket);
 });
 
+/**
+ * Display board UI
+ * 
+ * @param {*} board 
+ */
 function createBoard(board) {
 
     //display piles
@@ -35,9 +40,16 @@ function createBoard(board) {
     }
 }
 
-function createImage(url, callback) {
+/**
+ * Create and return an image
+ * 
+ * @param {*} url 
+ * @param {*} callback 
+ * @returns 
+ */
+function createImage(src, callback) {
     var image = new Image();
-    image.src = url;
+    image.src = src;
     image.onclick = callback;
     image.width = 2.5 * IMAGE_SCALE;
     image.height = 3.5 * IMAGE_SCALE;
@@ -45,48 +57,43 @@ function createImage(url, callback) {
 }
 
 /**
- * Send moves to server
- * @param {} baord 
+ * Event handler for clicks on card images
+ */
+function imgClick() {
+    move = {type: "move", att_pile: 0, def_pile: 3};
+    send(move);
+}
+
+/**
+ * Add an event handler to handle messages recieved from the server
+ * 
  * @param {*} websocket 
  */
-function sendMoves(board, websocket) {
-    // Add event listeners
-    move = {att_pile: 0, def_pile: 3};
-    // Send event to websocket
-    //websocket.send(JSON.stringify(move));
-    websocket.onopen = () => websocket.send('hello');
-}
-
-function showMessage(message) {
-    window.setTimeout(() => window.alert(message), 50);
-}
-
-function recieveMoves(board, websocket) {
+function recieveEvents(websocket) {
     websocket.addEventListener("message", ({data}) => {
         const event = JSON.parse(data);
         console.log(event);
     });
 }
 
+/**
+ * Send object to the server
+ * 
+ * @param {} event 
+ */
+function send(event) {
+    websocket.send(JSON.stringify(event));
+}
 
-document.body.style.background = "Gray";
-
+// Create button
 var button = document.createElement("button");
 button.innerHTML = "Add Card";
 button.onclick = myFunc;
 document.body.appendChild(button);
 
-
+/**
+ * Button handler (for testing)
+ */
 function myFunc() {
-    const card = document.createElement('div');
-    card.className = 'card';
-    img = createImage("C:/Users/Julian Walston/Documents/GitHub/scrimish/images/blue_card_back.png", imgClick);
-    document.body.appendChild(img);
-    //document.body.appendChild(createImage("C:/Users/Julian Walston/Documents/GitHub/scrimish/images/blue_card_back.png", imgClick));
-    websocket.send('Button Pressed');
-}
-
-function imgClick() {
-    alert("you clicked");
-    websocket.send('Card Clicked')
+    send({type :"msg", text: 'Button Clicked!'});
 }
