@@ -1,16 +1,27 @@
+.openGamesPanel {
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: space-between;
+    background-color: black;
+}
+
+.homepageBtnPanel {
+    display: flex;
+    flex-flow: column wrap;
+    background-color: blueviolet;
+}
+
 .board {
     background-color: blue;
     display: flex;
     flex-flow:column nowrap;
     justify-content: space-around;
-    /* padding: 10px; */
 }
 
 .realm {
     display: flex;
     flex-flow: row nowrap;
     justify-content: space-around;
-    /* padding: 10px; */
 }
 
 .pile {

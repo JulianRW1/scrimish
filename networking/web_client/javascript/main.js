@@ -4,22 +4,55 @@ const IMAGE_SCALE = 50;
 
 
 window.addEventListener("DOMContentLoaded", () => {
-    // Initialize the UI
-    const board = document.querySelector(".board");
-    createBoard(board);
-
     // Open WebSocket connection and register event handlers
     websocket = new WebSocket("ws://192.168.1.17:8001/"); 
 
     recieveEvents(websocket);
+    
+    // Initialize the UI
+    initHomepage();
+
+    board = createBoard();
+
 });
+
+function initHomepage() {
+    // create games panel
+    let openGamesPanel = document.createElement('div');
+    openGamesPanel.className = 'openGamesPanel';
+    document.body.appendChild(openGamesPanel);
+
+    // create buttons panel
+    let homepageBtnPanel = document.createElement('div');
+    homepageBtnPanel.className = 'homepageBtnPanel';
+    document.body.appendChild(homepageBtnPanel).className;
+
+    let createGameBtn = makeButton(homepageBtnPanel, 'Create Game', 'createGameBtn', createGame);
+}
+
+function makeButton(parent, text, className, callback) {
+    btn = document.createElement('button');
+    btn.innerHTML = text;
+    btn.className = className;
+    btn.onclick = callback;
+    parent.appendChild(btn);
+    return btn;
+}
+
+function createGame() {
+    send(new Message('game created'));
+}
 
 /**
  * Display board UI
  * 
  * @param {*} board 
  */
-function createBoard(board) {
+function createBoard() {
+    // Create board div
+    let board = document.createElement("div");
+    board.className = "board";
+    document.body.appendChild(board);
 
     //display piles
     const PILES = 5;
@@ -38,6 +71,7 @@ function createBoard(board) {
         }
         board.append(realmElement);
     }
+    return board;
 }
 
 /**
@@ -60,8 +94,7 @@ function createImage(src, callback) {
  * Event handler for clicks on card images
  */
 function imgClick() {
-    move = {type: "move", att_pile: 0, def_pile: 3};
-    send(move);
+    send(new Move(0, 3));
 }
 
 /**
@@ -86,14 +119,36 @@ function send(event) {
 }
 
 // Create button
-var button = document.createElement("button");
-button.innerHTML = "Add Card";
-button.onclick = myFunc;
-document.body.appendChild(button);
+var button = makeButton(document.body, "My Button", '', myFunc);
 
 /**
  * Button handler (for testing)
  */
 function myFunc() {
-    send({type :"msg", text: 'Button Clicked!'});
+    send(new Message('Button Clicked'));
+}
+
+
+class Event {
+    type = '';
+      constructor(type) {
+        this.type = type;
+      }
+  }
+
+class Move extends Event {
+    attackPile;
+    constructor(attackPile, defensePile) {
+        super('move');
+        this.attackPile = attackPile;
+        this.defensePile = defensePile;
+    }
+}
+  
+class Message extends Event {
+    text = '';
+    constructor(text) {
+        super('msg');
+        this.text = text;
+    }
 }

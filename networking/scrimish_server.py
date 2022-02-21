@@ -44,8 +44,8 @@ async def process_event(event, websocket):
     eventObj = json.loads(event)
 
     if eventObj['type'] == "move":
-        print(str(eventObj) +  " --- " + eventObj['type'])
-        await websocket.send(json.dumps(event))
+        print(str(eventObj))
+        await websocket.send(json.dumps(eventObj))
         # print(message)
     elif eventObj['type'] == "msg":
         print(eventObj['text'])
