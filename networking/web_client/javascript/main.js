@@ -2,6 +2,10 @@ var websocket;
 
 const IMAGE_SCALE = 50;
 
+var activeGames = [];
+
+const AVAILABLE_GAMES = 'available games';
+
 
 window.addEventListener("DOMContentLoaded", () => {
     // Open WebSocket connection and register event handlers
@@ -12,35 +16,163 @@ window.addEventListener("DOMContentLoaded", () => {
     // Initialize the UI
     initHomepage();
 
-    board = createBoard();
+    // board = createBoard();
 
 });
 
 function initHomepage() {
+    // create home page panel
+    let homepagePanel = document.createElement('div');
+    homepagePanel.className = 'homepage';
+    document.body.appendChild(homepagePanel);
+
+    let leftHomeScreen = document.createElement('div');
+    leftHomeScreen.className = 'leftHomeScreen';
+    homepagePanel.appendChild(leftHomeScreen);
+
+    let gameOptions = document.createElement('div');
+    gameOptions.className = 'gameOptions';
+    leftHomeScreen.appendChild(gameOptions);
+    
     // create games panel
-    let openGamesPanel = document.createElement('div');
-    openGamesPanel.className = 'openGamesPanel';
-    document.body.appendChild(openGamesPanel);
+    let gamesPanel = document.createElement('div');
+    gamesPanel.className = 'gamesPanel';
+    gamesPanel.id = 'gamesPanel';
+    leftHomeScreen.appendChild(gamesPanel);
+
+    //add games to gamesPanel
+    let gamesTable = document.createElement('table');
+    gamesTable.className = 'gamesTable';
+    gamesTable.id = 'gamesTable';
+    gamesPanel.appendChild(gamesTable);
+
+    let games = [
+        new Game('jk11', 'Beginner', 'Slow'),
+        new Game('ok56', 'Expert', 'Fast'),
+        new Game('3kkl', 'Intermediate', 'Slow'),
+        new Game('0op5', 'Intermediate', 'Very Fast'),
+        new Game('asdf', 'Beginner', 'Slow'),
+        new Game('lkjl', 'Expert', 'Fast'),
+        new Game('hunt', 'Intermediate', 'Slow'),
+        new Game('stir', 'Intermediate', 'Very Fast'),
+        new Game('cars', 'Beginner', 'Slow'),
+        new Game('okey', 'Expert', 'Fast'),
+        new Game('akil', 'Intermediate', 'Slow'),
+        new Game('0983', 'Intermediate', 'Very Fast'),
+        new Game('1234', 'Beginner', 'Slow'),
+        new Game('0000', 'Expert', 'Fast'),
+        new Game('aaaa', 'Intermediate', 'Slow'),
+        new Game('lilt', 'Intermediate', 'Very Fast')
+    ];
+    generateTableHead(gamesTable, games[0]);
+    generateTable(gamesTable, games);
+
+    refreshBtn = makeButton(parent=gameOptions, text='⟳ Refresh', className= 'refreshGamesBtn', refreshGames);
+
+    websocket.onopen = () => send(new Query(AVAILABLE_GAMES));
 
     // create buttons panel
     let homepageBtnPanel = document.createElement('div');
     homepageBtnPanel.className = 'homepageBtnPanel';
-    document.body.appendChild(homepageBtnPanel).className;
+    homepagePanel.appendChild(homepageBtnPanel).className;
 
-    let createGameBtn = makeButton(homepageBtnPanel, 'Create Game', 'createGameBtn', createGame);
+    let createGameBtn = makeButton(parent=homepageBtnPanel, text='Create Game', className='createGameBtn', callback=createGame);
+    let findGameBtn = makeButton(parent=homepageBtnPanel, text='Find Game', className='findGameBtn', callback=findGame);
 }
 
+function generateTableHead(table, data =  {'id': '', 'level': '', 'speed': '', 'connections': ''}) {
+    let thead = table.createTHead();
+    let row = thead.insertRow();
+    for (let key of Object.keys(data)) {
+        let th = document.createElement("th");
+        let text;
+        if (key == 'connections') {
+            text = document.createTextNode('Players')
+        } else {
+            text = document.createTextNode(key.substring(0, 1).toUpperCase() + key.substring(1));
+        }
+        th.appendChild(text);
+        row.appendChild(th);
+    }
+}
+
+function generateTable(table, data) {
+    let body = table.createTBody();
+    body.className = 'tableBody'
+    for (let element of data) {
+        let row = body.insertRow();
+
+        row.onclick = joinGame.bind(null, element.id);  // bind function to click
+        
+        for (key in element) {
+            let cell = row.insertCell();
+            let text;
+            if (key == 'connections') {
+                text = document.createTextNode(element.connections + '/' + 2);
+            } else {
+                text = document.createTextNode(element[key]);
+            }
+            //cell.style.color = 'white';
+            cell.appendChild(text);
+        }
+    }
+}
+
+function displayGamePanel(games) {
+
+    // Remove current table
+    let oldTable = document.getElementById('gamesTable');
+    oldTable.remove();
+
+    // create a new table
+    let gamesTable = document.createElement('table');
+    gamesTable.className = 'gamesTable';
+    gamesTable.id = 'gamesTable';
+
+    document.getElementById('gamesPanel').appendChild(gamesTable);
+
+    // Repopulate table
+    if (games.length > 0) {    
+        generateTableHead(gamesTable, games[0]);
+    } else {
+        generateTableHead(gamesTable);
+    }
+    generateTable(gamesTable, games);
+}
+
+function refreshGames() {
+    send(new Query(AVAILABLE_GAMES));
+}
+
+/**
+ * Creates a button on the parent element with given values
+ * 
+ * @param {*} parent 
+ * @param {String} text 
+ * @param {String} className 
+ * @param {function} callback 
+ * @returns 
+ */
 function makeButton(parent, text, className, callback) {
-    btn = document.createElement('button');
+    var btn = document.createElement('button');
     btn.innerHTML = text;
-    btn.className = className;
-    btn.onclick = callback;
+    if (className) btn.className = className;
+    if (callback) btn.onclick = callback;
     parent.appendChild(btn);
     return btn;
 }
 
+function joinGame(gameID) {
+    send(new JoinGame(gameID));
+}
+
 function createGame() {
-    send(new Message('game created'));
+    send(new NewGame('Expert', 'Fast'));
+    send(new Query(AVAILABLE_GAMES));
+}
+
+function findGame() {
+    send(new Message('Finding Game...'))
 }
 
 /**
@@ -106,29 +238,36 @@ function recieveEvents(websocket) {
     websocket.addEventListener("message", ({data}) => {
         const event = JSON.parse(data);
         console.log(event);
+        if (event.type == AVAILABLE_GAMES) {
+            displayGamePanel(event.data);
+        }
     });
 }
 
 /**
  * Send object to the server
  * 
- * @param {} event 
+ * @param {Event} event 
  */
 function send(event) {
-    websocket.send(JSON.stringify(event));
+    if (websocket.readyState == 0) {
+        websocket.onopen = () => websocket.send(JSON.stringify(event));
+    } else {
+        websocket.send(JSON.stringify(event));
+    }
 }
 
-// Create button
-var button = makeButton(document.body, "My Button", '', myFunc);
+class Game {
+    constructor (level, speed) {
+        this.level = level;
+        this.speed = speed;
+    }
+}
 
 /**
- * Button handler (for testing)
+ * Event Objects
+ * events to pass to server
  */
-function myFunc() {
-    send(new Message('Button Clicked'));
-}
-
-
 class Event {
     type = '';
       constructor(type) {
@@ -150,5 +289,28 @@ class Message extends Event {
     constructor(text) {
         super('msg');
         this.text = text;
+    }
+}
+
+class NewGame extends Event {
+    constructor(level, speed) {
+        super('new game');
+        this.level = level;
+        this.speed = speed;
+    }
+}
+
+class JoinGame extends Event {
+    id = '';
+    constructor(id) {
+        super('join');
+        this.id = id;
+    }
+}
+
+class Query extends Event {
+    constructor(dataType) {
+        super('query');
+        this.dataType = dataType;
     }
 }
