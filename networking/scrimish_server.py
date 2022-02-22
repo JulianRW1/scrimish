@@ -75,7 +75,7 @@ async def process_event(user_id, event, websocket):
         id = generate_game_id(available_game_ids) # generate id
 
     
-        GAME_LIST.append({'id': id, 'level': eventObj.get('level'), 'speed': eventObj.get('speed'), 'connections': [websocket]})
+        GAME_LIST.append({'id': id, 'level': eventObj.get('level'), 'speed': eventObj.get('speed'), 'players': eventObj.get('players'), 'connections': [websocket]})
 
         print(f'[GAME CREATED] - {user_id} created game {id}')
 
@@ -87,7 +87,7 @@ async def process_event(user_id, event, websocket):
         if eventObj.get('dataType') == 'available games':
             resulting_list = []
             for game in GAME_LIST :
-                game = {'id': game.get('id'), 'level': game.get('level'), 'speed': game.get('speed'), 'connections': len(game.get('connections'))}
+                game = {'id': game.get('id'), 'level': game.get('level'), 'speed': game.get('speed'), 'players': game.get('players'), 'connections': len(game.get('connections'))}
                 resulting_list.append(game)
             
             answer = {'type': eventObj.get('dataType'), 'data': resulting_list}
