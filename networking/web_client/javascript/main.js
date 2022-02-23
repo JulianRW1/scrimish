@@ -9,7 +9,8 @@ const AVAILABLE_GAMES = 'available games';
 
 window.addEventListener("DOMContentLoaded", () => {
     // Open WebSocket connection and register event handlers
-    websocket = new WebSocket("ws://192.168.1.17:8001/"); 
+    // websocket = new WebSocket("ws://192.168.1.17:8001/"); 
+    websocket = new WebSocket("ws://localhost:8001/"); 
 
     recieveEvents(websocket);
     
@@ -188,7 +189,18 @@ function makeButton(parent, text, className, callback) {
 }
 
 function joinGame(gameID) {
+    document.location.href = '?join=' + gameID;
+    // TODO: handle game joining
     send(new JoinGame(gameID));
+}
+
+function redirect(url) {
+    const params = new URLSearchParams(window.location.search);
+    alert('params: ' + params);
+    if (params.has('join')) {
+        alert('has join');
+        document.body.removeChild(document.getElementsByClassName('homepage'));
+    }
 }
 
 function createGame() {
@@ -275,9 +287,12 @@ function recieveEvents(websocket) {
     websocket.addEventListener("message", ({data}) => {
         const event = JSON.parse(data);
         console.log(event);
-        if (event.type == AVAILABLE_GAMES) {
+        if (event.type == 'joined game') {
+            redirect('?join=' + event.id);
+
+        } else if (event.type == AVAILABLE_GAMES) {
             displayGamePanel(event.data);
-        }
+        } 
     });
 }
 

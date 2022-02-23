@@ -1,11 +1,13 @@
 import asyncio
 import socket
+from scrimish import Scrimish
 import websockets
 import json
 from scrimish_server_utils import generate_game_id, generate_user_id
 
 USERS = []
-GAME_LIST = [
+GAME_LIST = {}
+    # {'lkjlkjlkjlkj' : (Scrimish('level', 'speed', Player(), Player()), ['connected])}
     # { 'id': generate_game_id(GAME_ID_LIST), 'level': 'Beginner', 'speed': 'Slow', 'connections': []},
     # { 'id': generate_game_id(GAME_ID_LIST), 'level': 'Expert', 'speed': 'Fast', 'connections': []},
     # { 'id': generate_game_id(GAME_ID_LIST), 'level': 'Intermediate', 'speed': 'Very Fast', 'connections': [] },
@@ -22,7 +24,7 @@ GAME_LIST = [
     # { 'id': generate_game_id(GAME_ID_LIST), 'level': 'Expert', 'speed': 'Fast', 'connections': []},
     # { 'id': generate_game_id(GAME_ID_LIST), 'level': 'Intermediate', 'speed': 'Very Fast', 'connections': []},
     # { 'id': generate_game_id(GAME_ID_LIST), 'level': 'Beginner', 'speed': 'Slow','connections': []}
-]
+
 
 class User:
     def __init__(self, user_id, websocket) -> None:
@@ -36,6 +38,22 @@ class User:
 
     def get_socket(self):
         return self.ws
+
+
+async def join(websocket, game_id):
+
+    try:
+        game, connected = GAME_LIST[game_id]
+    except KeyError:
+        # TODO - send error message
+        return
+
+    connected.append(websocket)
+    try:
+        async for message in websocket:
+            print('player sent', message)
+    finally:
+        connected.remove(websocket)
 
 
 def new_connection(websocket) -> int:
@@ -67,28 +85,30 @@ async def process_event(user_id, event, websocket):
         print(eventObj.get('text'))
 
     elif eventObj.get('type') == 'new game':
+        print(GAME_LIST)
         # Get available ids
         available_game_ids = []
-        for game in GAME_LIST:
-            available_game_ids.append(game.get('id'))
+        for game, connected in GAME_LIST.values():
+            available_game_ids.append(game.id)
 
         id = generate_game_id(available_game_ids) # generate id
 
-    
-        GAME_LIST.append({'id': id, 'level': eventObj.get('level'), 'speed': eventObj.get('speed'), 'players': eventObj.get('players'), 'connections': [websocket]})
-
+        GAME_LIST[id] = (Scrimish(id, eventObj.get('level'), eventObj.get('speed'), eventObj.get('players')), [websocket])
+        
         print(f'[GAME CREATED] - {user_id} created game {id}')
 
     elif eventObj.get('type') == 'join':
+        await join(websocket, eventObj.get('id'))
         print(f'[GAME JOINED] - {user_id} joined game {eventObj.get("id")}')
+        await websocket.send(json.dumps({'type': 'joined game', 'id': eventObj.get('id')}))
 
     elif eventObj.get('type') == 'query':
         answer = {}
         if eventObj.get('dataType') == 'available games':
             resulting_list = []
-            for game in GAME_LIST :
-                game = {'id': game.get('id'), 'level': game.get('level'), 'speed': game.get('speed'), 'players': game.get('players'), 'connections': len(game.get('connections'))}
-                resulting_list.append(game)
+            for game, connected in GAME_LIST.values():
+                game_ = {'id': game.id, 'level': game.level, 'speed': game.speed, 'players': game.players, 'connections': len(connected)}
+                resulting_list.append(game_)
             
             answer = {'type': eventObj.get('dataType'), 'data': resulting_list}
         
@@ -113,7 +133,8 @@ async def handler(websocket):
 
 
 async def main():
-    SERVER = socket.gethostbyname(socket.gethostname())
+    # SERVER = socket.gethostbyname(socket.gethostname())
+    SERVER = ''
     async with websockets.serve(handler, SERVER, 8001):
         print(f'[STARTING] Server is starting on port {SERVER}')
         await asyncio.Future() # run forever
