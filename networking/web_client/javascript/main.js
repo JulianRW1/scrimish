@@ -1,3 +1,5 @@
+// IMAGE GALLERY LINK = https://postimg.cc/gallery/SQmshss
+
 var websocket;
 
 const IMAGE_SCALE = 50;
@@ -6,6 +8,33 @@ var activeGames = [];
 
 const AVAILABLE_GAMES = 'available games';
 
+const CARD_IMAGES = {
+    'r_back': 'https://i.postimg.cc/43y9Kh7D/red-card-back.png',
+    'r_1': 'https://i.postimg.cc/j5Jnc0hv/red-dagger.png',
+    'r_2': 'https://i.postimg.cc/hP0zp09F/red-sw-ord.png',
+    'r_3': 'https://i.postimg.cc/44VhhGyx/red-morning-star.png',
+    'r_4': 'https://i.postimg.cc/wjTtPsV1/red-war-axe.png',
+    'r_5': 'https://i.postimg.cc/zvZbPttN/red-halberd.png',
+    'r_6': 'https://i.postimg.cc/wMXyKXZm/red-longsw-ord.png',
+    'r_A': 'https://i.postimg.cc/9QJ9FBMP/red-archer.png',
+    'r_S': 'https://i.postimg.cc/Fsvky6kg/red-shield.png',
+    'r_C': 'https://i.postimg.cc/s2LZ5D5v/red-crown.png',
+    'b_back': 'https://i.postimg.cc/D0LsvkJm/blue-card-back.png',
+    'b_1': 'https://i.postimg.cc/Nj462cNH/blue-dagger.png',
+    'b_2': 'https://i.postimg.cc/vHwfPBkn/blue-sw-ord.png',
+    'b_3': 'https://i.postimg.cc/LXrLF6sr/blue-morning-star.png',
+    'b_4': 'https://i.postimg.cc/3JjpzhQc/blue-war-axe.png',
+    'b_5': 'https://i.postimg.cc/BvnxxVyw/blue-halberd.png',
+    'b_6': 'https://i.postimg.cc/bJGk52qx/blue-longsw-ord.png',
+    'b_A': 'https://i.postimg.cc/g2dy0JKp/blue-archer.png',
+    'b_S': 'https://i.postimg.cc/QNTck54s/blue-shield.png',
+    'b_C': 'https://i.postimg.cc/1z7DMK1R/blue-crown.png'
+};
+
+let blueRealm = []
+let redRealm = []
+let userPlayerColor = 'White'
+
 
 window.addEventListener("DOMContentLoaded", () => {
     // Open WebSocket connection and register event handlers
@@ -13,13 +42,29 @@ window.addEventListener("DOMContentLoaded", () => {
     websocket = new WebSocket("ws://localhost:8001/"); 
 
     recieveEvents(websocket);
-    
+
     // Initialize the UI
-    initHomepage();
+    initUI();
 
     // board = createBoard();
 
 });
+
+function initUI() {
+    let params = new URLSearchParams(window.location.search);
+    if (params.has('game')) {
+        initGame(params.get('game'));
+    } else {
+        initHomepage();
+    }
+}
+
+function initGame(game_id) {
+
+    let initGameStateQuery = new Query('init game state')
+    initGameStateQuery.game_id = game_id
+    send(initGameStateQuery)
+}
 
 function initHomepage() {
     // create home page panel
@@ -84,10 +129,9 @@ function initHomepage() {
     playerSelectLbl.innerHTML = 'Player Count:';
     gameSettingsPanel.appendChild(playerSelectLbl);
 
-    let playersSelect = createDropDownSelect([2, 3, 4]);
+    let playersSelect = createDropDownSelect([2]);
     playersSelect.id = 'playersSelect';
     gameSettingsPanel.appendChild(playersSelect);
-
 
 
     let createGameBtn = makeButton(parent=rightHomeScreen, text='Create Game', className='createGameBtn', callback=createGame);
@@ -107,17 +151,15 @@ function createDropDownSelect(options) {
     return select;
 }
 
-function generateTableHead(table, data =  {'id': '', 'level': '', 'speed': '', 'connections': ''}) {
+function generateTableHead(table, data =  {'id': '', 'level': '', 'speed': ''}) {
     let thead = table.createTHead();
     let row = thead.insertRow();
     for (let key of Object.keys(data)) {
-            if (key != 'connections') {
-            let th = document.createElement("th");
-            let text;
-            text = document.createTextNode(key.substring(0, 1).toUpperCase() + key.substring(1));
-            th.appendChild(text);
-            row.appendChild(th);
-        }
+        let th = document.createElement("th");
+        let text;
+        text = document.createTextNode(key.substring(0, 1).toUpperCase() + key.substring(1));
+        th.appendChild(text);
+        row.appendChild(th);
     }
 }
 
@@ -189,18 +231,8 @@ function makeButton(parent, text, className, callback) {
 }
 
 function joinGame(gameID) {
-    document.location.href = '?join=' + gameID;
     // TODO: handle game joining
     send(new JoinGame(gameID));
-}
-
-function redirect(url) {
-    const params = new URLSearchParams(window.location.search);
-    alert('params: ' + params);
-    if (params.has('join')) {
-        alert('has join');
-        document.body.removeChild(document.getElementsByClassName('homepage'));
-    }
 }
 
 function createGame() {
@@ -212,10 +244,9 @@ function createGame() {
     // Get the values in the dropdown
     let level = levelSelect.options[levelSelect.selectedIndex].text;
     let speed = speedSelect.options[speedSelect.selectedIndex].text;
-    let players = playersSelect.options[playersSelect.selectedIndex].text;
     
     // Tell server to create a new game
-    send(new NewGame(level, speed, players));
+    send(new NewGame(level, speed));
     // Update game display
     send(new Query(AVAILABLE_GAMES));
 }
@@ -234,25 +265,38 @@ function createBoard() {
     let board = document.createElement("div");
     board.className = "board";
     document.body.appendChild(board);
+    
 
-    //display piles
-    const PILES = 5;
-    const REALMS = 2;
-    for (let realm = 0; realm < REALMS; realm++) {
+    let realmOrder = []
+    if (userPlayerColor == 'Blue') {
+        realmOrder = [redRealm, blueRealm]
+    } else if (userPlayerColor == 'Red') {
+        realmOrder = [blueRealm, redRealm]
+    }
+
+    for (let realm = 0; realm < realmOrder.length; realm++) {
+        let currentRealm = realmOrder[realm];
+
         const realmElement = document.createElement("div");
         realmElement.className = "realm";
         realmElement.dataset.realm = realm;
-        for (let pile = 0; pile < PILES; pile++) {
+            
+        for (let pile = 0; pile < currentRealm.length; pile++) {
             const pileElement = document.createElement("div");
             pileElement.className = "pile";
             pileElement.dataset.pile = pile;
-            pileElement.appendChild(createImage("C:/Users/Julian Walston/Documents/GitHub/scrimish/images/blue_card_back.png", imgClick));
-            
-            realmElement.append(pileElement);
+
+            let topCard = currentRealm[pile][currentRealm[pile].length - 1]
+            imgPath = CARD_IMAGES[topCard];
+
+            img = createImage(imgPath, IMAGE_SCALE, cardClick.bind(null, pile, topCard));
+
+            pileElement.appendChild(img);
+
+            realmElement.appendChild(pileElement);
         }
         board.append(realmElement);
-    }
-    return board;
+    };
 }
 
 /**
@@ -262,19 +306,21 @@ function createBoard() {
  * @param {*} callback 
  * @returns 
  */
-function createImage(src, callback) {
+function createImage(src, img_scale, callback) {
     var image = new Image();
     image.src = src;
     image.onclick = callback;
-    image.width = 2.5 * IMAGE_SCALE;
-    image.height = 3.5 * IMAGE_SCALE;
+    image.width = 2.5 * img_scale;
+    image.height = 3.5 * img_scale;
     return image;
 }
 
 /**
  * Event handler for clicks on card images
  */
-function imgClick() {
+function cardClick(pile, card) {
+
+    alert('pile: ' + pile)
     send(new Move(0, 3));
 }
 
@@ -287,12 +333,27 @@ function recieveEvents(websocket) {
     websocket.addEventListener("message", ({data}) => {
         const event = JSON.parse(data);
         console.log(event);
+
         if (event.type == 'joined game') {
-            redirect('?join=' + event.id);
+            send(new Message('joined game'));
 
         } else if (event.type == AVAILABLE_GAMES) {
             displayGamePanel(event.data);
-        } 
+            
+        } else if (event.type == 'redirect') {
+            document.location.href = event.url;
+
+        } else if (event.type == 'init game state') {
+            redRealm = event.redRealm;
+            blueRealm = event.blueRealm;
+
+            createBoard();
+        } else if (event.type = 'player color') {
+            userPlayerColor = event.color;
+        } else {
+            send(new Message('invalid type [ERROR]'))
+        }
+
     });
 }
 
@@ -309,12 +370,6 @@ function send(event) {
     }
 }
 
-// class Game {
-//     constructor (level, speed) {
-//         this.level = level;
-//         this.speed = speed;
-//     }
-// }
 
 /**
  * Event Objects
@@ -345,11 +400,10 @@ class Message extends Event {
 }
 
 class NewGame extends Event {
-    constructor(level, speed, players) {
+    constructor(level, speed) {
         super('new game');
         this.level = level;
         this.speed = speed;
-        this.players = players;
     }
 }
 
@@ -367,3 +421,5 @@ class Query extends Event {
         this.dataType = dataType;
     }
 }
+
+//TODO - Disconnect event (more accurate than server side attempt)

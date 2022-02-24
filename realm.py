@@ -91,3 +91,7 @@ class Realm():
             temp = crown_pile[constants.BOTTOM_PILE_INDEX]
             crown_pile[constants.BOTTOM_PILE_INDEX] = crown_pile[crown_index]
             crown_pile[crown_index] = temp
+
+    
+    def get_realm(self):
+        return self._data
