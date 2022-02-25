@@ -31,9 +31,15 @@ const CARD_IMAGES = {
     'b_C': 'https://i.postimg.cc/1z7DMK1R/blue-crown.png'
 };
 
-let blueRealm = []
-let redRealm = []
-let userPlayerColor = 'White'
+let blueRealm = [];
+let redRealm = [];
+let userPlayerColor = 'White';
+
+let selectedPile = -1;
+
+let userID;
+
+let COOKIES = false;
 
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -41,13 +47,25 @@ window.addEventListener("DOMContentLoaded", () => {
     // websocket = new WebSocket("ws://192.168.1.17:8001/"); 
     websocket = new WebSocket("ws://localhost:8001/"); 
 
+
     recieveEvents(websocket);
 
     // Initialize the UI
-    initUI();
+    websocket.onopen = () => {
+        console.log(document.cookie);
+        if (COOKIES) {
+            userID = getCookie('userID'); // get the userID cookie if it exists
+            send(new Connection(userID));
+        } else {
+            send(new Connection(''))
+        }
+        
+        initUI();
+    }
 
-    // board = createBoard();
-
+    // websocket.onclose = () => {
+    //     send(new Disconnection());
+    // }
 });
 
 function initUI() {
@@ -61,9 +79,9 @@ function initUI() {
 
 function initGame(game_id) {
 
-    let initGameStateQuery = new Query('init game state')
-    initGameStateQuery.game_id = game_id
-    send(initGameStateQuery)
+    let initGameStateQuery = new Query('init game state');
+    initGameStateQuery.game_id = game_id;
+    send(initGameStateQuery);
 }
 
 function initHomepage() {
@@ -95,9 +113,6 @@ function initHomepage() {
     gamesPanel.appendChild(gamesTable);
 
     refreshBtn = makeButton(parent=gameOptions, text='⟳ Refresh', className= 'refreshGamesBtn', refreshGames);
-
-    // Query the server for the available games when socket opens
-    websocket.onopen = () => send(new Query(AVAILABLE_GAMES)); 
 
     // create right panel
     let rightHomeScreen = document.createElement('div');
@@ -136,6 +151,17 @@ function initHomepage() {
 
     let createGameBtn = makeButton(parent=rightHomeScreen, text='Create Game', className='createGameBtn', callback=createGame);
     let findGameBtn = makeButton(parent=rightHomeScreen, text='Find Game', className='findGameBtn', callback=findGame);
+
+    // Query the server for the available games when socket opens
+    let sent = false;
+    while (!sent) {
+        
+        if (websocket.readyState == 1) {
+            //websocket is open
+            send(new Query(AVAILABLE_GAMES)); 
+            sent = true;
+        }
+    }
 }
 
 function createDropDownSelect(options) {
@@ -268,9 +294,9 @@ function createBoard() {
     
 
     let realmOrder = []
-    if (userPlayerColor == 'Blue') {
+    if (userPlayerColor == 'b') {
         realmOrder = [redRealm, blueRealm]
-    } else if (userPlayerColor == 'Red') {
+    } else if (userPlayerColor == 'r') {
         realmOrder = [blueRealm, redRealm]
     }
 
@@ -278,18 +304,27 @@ function createBoard() {
         let currentRealm = realmOrder[realm];
 
         const realmElement = document.createElement("div");
+        
+        let realmColor = ''; // 'r' or 'b'
+            if (currentRealm == blueRealm) {
+                realmColor = 'b';
+            } else {
+                realmColor = 'r';
+            }
+
+        realmElement.id = 'realm_' + realmColor;
         realmElement.className = "realm";
-        realmElement.dataset.realm = realm;
             
         for (let pile = 0; pile < currentRealm.length; pile++) {
             const pileElement = document.createElement("div");
             pileElement.className = "pile";
-            pileElement.dataset.pile = pile;
+            pileElement.id = realmColor + '_pile_' + pile;
 
-            let topCard = currentRealm[pile][currentRealm[pile].length - 1]
-            imgPath = CARD_IMAGES[topCard];
+            let topCard = currentRealm[pile][currentRealm[pile].length - 1];
+            imgPath = CARD_IMAGES[realmColor + '_back'];
 
-            img = createImage(imgPath, IMAGE_SCALE, cardClick.bind(null, pile, topCard));
+            img = createImage(imgPath, IMAGE_SCALE, cardClick.bind(null, pile, realmColor, topCard));
+            img.id = pileElement.id + '_img';
 
             pileElement.appendChild(img);
 
@@ -318,10 +353,62 @@ function createImage(src, img_scale, callback) {
 /**
  * Event handler for clicks on card images
  */
-function cardClick(pile, card) {
+function cardClick(pile, realmColor, topCard) {
 
-    alert('pile: ' + pile)
-    send(new Move(0, 3));
+    let pileElement = document.getElementById(realmColor + '_pile_' + pile);
+
+    let cardAlliance = topCard.substring(0,1) // 'r' or 'b'
+
+    if (selectedPile == -1) {
+        // No selected pile
+        if (userPlayerColor == cardAlliance) {
+            // Card belongs to player
+
+            // select the clicked card
+            flipCard(true, pile, realmColor, topCard);
+            selectedPile = pile;
+        } 
+    } else if (cardAlliance != userPlayerColor) {
+        // Card belongs to opponent
+
+        flipCard(true, pile, realmColor, topCard);
+
+        // perform attack
+        send(new Attack(attackPile=selectedPile, defensePile=pile, playerColor=userPlayerColor))
+
+        // reset display
+        selectedPile = -1;
+    } else if (pile == selectedPile && userPlayerColor == cardAlliance) {
+        // card is already selected
+
+        // deselect card
+        flipCard(false, pile, realmColor, topCard);
+        selectedPile = -1;
+    } else {
+        // Card is own card
+
+        //switch selected pile
+        flipCard(false, selectedPile, realmColor, topCard);
+        flipCard(true, pile, realmColor, topCard);
+        selectedPile = pile;
+    }
+}
+
+/**
+ * 
+ * @param {boolean} faceUp 
+ */
+function flipCard(faceUp, pile, realmColor, topCard) {
+
+    var currentImage = document.getElementById(realmColor + '_pile_' + pile + '_img');
+
+    if (faceUp) {
+        // Get the current image
+        currentImage.src = CARD_IMAGES[topCard];
+    } else {
+        currentImage.src = CARD_IMAGES[realmColor + '_back'];
+    }
+
 }
 
 /**
@@ -337,6 +424,13 @@ function recieveEvents(websocket) {
         if (event.type == 'joined game') {
             send(new Message('joined game'));
 
+        } else if (event.type == 'set') {
+            if (event.variable = 'userID') {
+                if (COOKIES) {
+                    setCookie('userID', event.value, false, 0);
+                }
+            }
+
         } else if (event.type == AVAILABLE_GAMES) {
             displayGamePanel(event.data);
             
@@ -347,13 +441,12 @@ function recieveEvents(websocket) {
             redRealm = event.redRealm;
             blueRealm = event.blueRealm;
 
+            userPlayerColor = event.player_color;
+
             createBoard();
-        } else if (event.type = 'player color') {
-            userPlayerColor = event.color;
         } else {
             send(new Message('invalid type [ERROR]'))
         }
-
     });
 }
 
@@ -370,6 +463,39 @@ function send(event) {
     }
 }
 
+/**
+ * 
+ * @param {String} cname 
+ * @param {*} cvalue 
+ * @param {boolean} expirationDate 
+ * @param {int} exdays 
+ */
+function setCookie(cname, cvalue, expirationDate, exdays) {
+    if (expirationDate) {
+        const d = new Date();
+        d.setTime(d.getTime() + (exdays*24*60*60*1000));
+        let expires = "expires="+ d.toUTCString();
+        document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+    } else {
+        document.cookie = cname + '=' + cvalue + ';' + 'path=/';
+    }
+}
+
+function getCookie(cname) {
+    let name = cname + "=";
+    let decodedCookie = decodeURIComponent(document.cookie);
+    let ca = decodedCookie.split(';');
+    for(let i = 0; i <ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) == ' ') {
+            c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+            return c.substring(name.length, c.length);
+        }
+    }
+    return "";
+}
 
 /**
  * Event Objects
@@ -382,12 +508,15 @@ class Event {
       }
   }
 
-class Move extends Event {
+class Attack extends Event {
     attackPile;
-    constructor(attackPile, defensePile) {
-        super('move');
+    defensePile;
+    playerColor;
+    constructor(attackPile, defensePile, playerColor) {
+        super('attack');
         this.attackPile = attackPile;
         this.defensePile = defensePile;
+        this.playerColor = playerColor;
     }
 }
   
@@ -419,6 +548,20 @@ class Query extends Event {
     constructor(dataType) {
         super('query');
         this.dataType = dataType;
+    }
+}
+
+class Connection extends Event {
+    constructor(userID) {
+        super('connection');
+        this.userID = userID;
+    }
+}
+
+class Disconnection extends Event {
+    constructor(userID) {
+        super('disconnection');
+        this.userID = userID;
     }
 }
 

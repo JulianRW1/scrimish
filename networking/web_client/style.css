@@ -66,19 +66,21 @@ td {
     padding: 50px;
 }
 
-.createGameBtn {
-    background-color: cyan;
-    width: 150px;
-    height: 50px;
-    border-radius: 10px;
-}
-
-.findGameBtn {
+.createGameBtn, .findGameBtn {
     background-color: aquamarine;
     width: 150px;
     height: 50px;
     border-radius: 10px;
 }
+  
+.createGameBtn {
+    background-color: cyan;
+
+}
+
+.findGameBtn {
+    background-color: aquamarine;
+} 
 
 .board {
     background-color: blue;

@@ -1,6 +1,4 @@
 import asyncio
-import socket
-import player
 from scrimish import Scrimish
 import websockets
 import json
@@ -8,7 +6,6 @@ from scrimish_server_utils import generate_game_id, generate_user_id
 
 USERS = []
 CREATED_GAMES = {}
-    # {'lkjlkjlkjlkj' : (Scrimish('level', 'speed', Player(), Player()), ['connected])}
 GAMES_IN_PROGRESS = {}
 
 class User:
@@ -22,7 +19,7 @@ class User:
     
 
     def get_socket(self):
-        return self.ws
+        return self.websocket
 
 
 def get_realms_as_letters(game_id):
@@ -60,31 +57,15 @@ async def join(websocket, game_id, user_id):
         print('[ERROR] - Not enough players connected')
         return
 
-
-
     # Transfer game to in progress list
     GAMES_IN_PROGRESS[game_id] = CREATED_GAMES[game_id]
     del CREATED_GAMES[game_id]
-
     
     print(f'[GAME JOINED] - {user_id} joined game {game_id}')
 
-    await websocket.send(json.dumps({'type': 'joined game', 'id': game_id}))
+    await websocket.send(json.dumps({'type': 'joined game', 'id': game_id, 'userID': user_id}))
 
     websockets.broadcast(connected, json.dumps({'type': 'redirect', 'url': ('?game=' + game_id)}))
-
-    # # give the first player the color blue
-    # await connected[0].send(json.dumps({'type': 'player color', 'color': 'Blue'})) 
-    # # give the second player the color red
-    # await connected[1].send(json.dumps({'type': 'player color', 'color': 'Red'})) 
-    # # TODO - ^ implement this on client
-
-
-    # red_realm_output, blue_realm_output = get_realms_as_letters(game_id)
-            
-    # answer = {'type': 'realms', 'redRealm': red_realm_output, 'blueRealm': blue_realm_output}
-                
-    # websockets.broadcast(connected, json.dumps(answer))
 
     try:
         async for message in websocket:
@@ -93,12 +74,37 @@ async def join(websocket, game_id, user_id):
         connected.remove(websocket)
 
 
-def new_connection(websocket) -> int:
-    user_id = generate_user_id(USERS);
-    USERS.append(User(user_id, websocket))
-    print(f'[NEW CONNECTION] user {user_id} connected') # [NEW CONNNECTION] addr connect
-    print(f'[ACTIVE CONNECTION] {len(USERS)}')
-    return user_id
+async def new_connection(websocket) -> int:
+    # TODO - hold username between sessions/reloads
+    #       (Probably make login screen)
+
+    connected = False;
+    while not connected:
+        try:
+            event = json.loads(await websocket.recv())
+            print(event)
+
+            if event.get('type') == 'connection':
+                user_id = event.get('userID')
+                if user_id == '':
+                    user_id = generate_user_id(USERS)
+                    USERS.append(User(user_id, websocket))
+                    await websocket.send(json.dumps({'type': 'set', 'variable': 'userID', 'value': user_id}))
+                print(f'[NEW CONNECTION] user {user_id} connected') # [NEW CONNNECTION] addr connect
+                print(f'[ACTIVE CONNECTION] {len(USERS)}')
+                return user_id
+
+
+            # user_id = generate_user_id(USERS) 
+            # USERS.append(User(user_id, websocket))
+        except websockets.ConnectionClosedOK or websockets.ConnectionResetError:
+            #disconnection(user_id)
+            print('disconnected')
+            break
+
+
+def get_user_id():
+    pass
 
 
 def disconnection(user_id):
@@ -112,16 +118,33 @@ def disconnection(user_id):
 
 async def process_event(user_id, event, websocket):
 
-    eventObj = json.loads(event)
+    event_obj = json.loads(event)
+    ev_type = event_obj.get('type')
 
-    if eventObj.get('type') == 'move':
-        print(str(eventObj))
-        await websocket.send(json.dumps(eventObj))
+    if ev_type == 'connection':
+        if (event_obj.get('userID') != ''):
+            # The client sent a userID
+            pass
+        else:
+            # The client did not send a userID
+            user_id = generate_user_id(USERS) 
+            USERS.append(User(user_id, websocket))
+            print(f'[NEW CONNECTION] user {user_id} connected') # [NEW CONNNECTION] addr connect
+            print(f'[ACTIVE CONNECTION] {len(USERS)}')
+            
+    elif ev_type == 'disconnection':
+        disconnection(event_obj.get('userID'))
+        pass
 
-    elif eventObj.get('type') == 'msg':
-        print('[MESSAGE] ' + eventObj.get('text'))
+    elif event_obj.get('type') == 'attack':
+        # TODO - implement
+        print(str(event_obj))
+        await websocket.send(json.dumps(event_obj))
 
-    elif eventObj.get('type') == 'new game':
+    elif event_obj.get('type') == 'msg':
+        print('[MESSAGE] ' + event_obj.get('text'))
+
+    elif event_obj.get('type') == 'new game':
         print(f'[CREATED GAMES] - {CREATED_GAMES}')
         # Get available ids
         available_game_ids = []
@@ -130,49 +153,49 @@ async def process_event(user_id, event, websocket):
 
         id = generate_game_id(available_game_ids) # generate id
 
-        CREATED_GAMES[id] = (Scrimish(id, eventObj.get('level'), eventObj.get('speed')), [websocket], user_id)
+        CREATED_GAMES[id] = (Scrimish(id, event_obj.get('level'), event_obj.get('speed')), [websocket], user_id)
         
         print(f'[GAME CREATED] - {user_id} created game {id}')
 
-    elif eventObj.get('type') == 'join':
-        await join(websocket, eventObj.get('id'), user_id)
+    elif event_obj.get('type') == 'join':
+        await join(websocket, event_obj.get('id'), user_id)
 
-    elif eventObj.get('type') == 'query':
-        if eventObj.get('dataType') == 'available games':
+    elif event_obj.get('type') == 'query':
+        if event_obj.get('dataType') == 'available games':
             resulting_list = []
             for game, connected, creator in CREATED_GAMES.values():
                 _game = {'id': game.id, 'level': game.level, 'speed': game.speed}
                 resulting_list.append(_game)
             
-            answer = {'type': eventObj.get('dataType'), 'data': resulting_list}
+            answer = {'type': event_obj.get('dataType'), 'data': resulting_list}
 
-        if eventObj.get('dataType') == 'init game state':
+        if event_obj.get('dataType') == 'init game state':
             
             try :
-                game, connected, creator = GAMES_IN_PROGRESS[eventObj.get('game_id')]
-                print('-------------------' + str(GAMES_IN_PROGRESS) + '________________')
+                game, connected, creator = GAMES_IN_PROGRESS[event_obj.get('game_id')]
             except KeyError:
                 print('game not found')
                 await websocket.send(json.dumps({'type': 'redirect', 'url': '/'}))
                 return
 
             # give the first player the color blue
+            print(f'user_id == creator - {user_id} == {creator} => {user_id == creator}')
             if user_id == creator:
-                await websocket.send(json.dumps({'type': 'player color', 'color': 'Blue'})) 
+                player_color = 'b'
             else:
                 # give the second player the color red
-                await websocket.send(json.dumps({'type': 'player color', 'color': 'Red'})) 
+                player_color = 'r'
 
-            red_realm_output, blue_realm_output = get_realms_as_letters(eventObj.get('game_id'))
+            red_realm_output, blue_realm_output = get_realms_as_letters(event_obj.get('game_id'))
             
-            answer = {'type': eventObj.get('dataType'), 'redRealm': red_realm_output, 'blueRealm': blue_realm_output}
+            answer = {'type': event_obj.get('dataType'), 'redRealm': red_realm_output, 'blueRealm': blue_realm_output, 'player_color': player_color}
 
-        if eventObj.get('dataType') == 'player color':
-            game, connected, creator = CREATED_GAMES[eventObj.get('game_id')]
-            if creator == eventObj.get('user_id'):
-                answer = {'type': eventObj.get('dataType'), 'color': 'Blue'}
+        if event_obj.get('dataType') == 'player color':
+            game, connected, creator = CREATED_GAMES[event_obj.get('game_id')]
+            if creator == event_obj.get('user_id'):
+                answer = {'type': event_obj.get('dataType'), 'color': 'b'}
             else:
-                answer = {'type': eventObj.get('dataType'), 'color': 'Red'}
+                answer = {'type': event_obj.get('dataType'), 'color': 'r'}
             
         
         await websocket.send(json.dumps(answer))
@@ -180,11 +203,11 @@ async def process_event(user_id, event, websocket):
         print(f'[QUERY] value is {answer}')
 
     else:
-        raise Exception(f'Illegal event type! ({eventObj.get("type")})')
+        raise Exception(f'Illegal event type! ({event_obj.get("type")})')
 
 
 async def handler(websocket):
-    user_id = new_connection(websocket)
+    user_id = await new_connection(websocket)
     while True:
         try:
             event = await websocket.recv()
@@ -196,7 +219,6 @@ async def handler(websocket):
 
 
 async def main():
-    # SERVER = socket.gethostbyname(socket.gethostname())
     SERVER = ''
     async with websockets.serve(handler, SERVER, 8001):
         print(f'[STARTING] Server is starting on port {SERVER}')

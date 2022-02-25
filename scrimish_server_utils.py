@@ -1,6 +1,3 @@
-import random
-import string;
-
 import secrets;
 
 
@@ -9,10 +6,8 @@ GAME_ID_LENGTH = 6;
 # Generates new unique game id
 def generate_game_id(active_game_ids: list ) -> str:
     id = secrets.token_urlsafe(GAME_ID_LENGTH);
-    # id = ''.join(random.choices(string.ascii_letters + string.digits, k=GAME_ID_LENGTH))
 
     while active_game_ids.count(id):
-        # id = ''.join(random.choices(string.ascii_letters + string.digits, k=GAME_ID_LENGTH))
         id = secrets.token_urlsafe(GAME_ID_LENGTH);
     
     return id
