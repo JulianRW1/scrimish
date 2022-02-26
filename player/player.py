@@ -30,19 +30,19 @@ class Player:
 
 
     # returns the cards that lost
-    def make_attack(self, defender_realm: Realm, attacker_pile: int, defender_pile: int):
-        attack = Attack(self.realm, defender_realm, attacker_pile, defender_pile)
+    def make_attack(self, defender, attacker_pile: int, defender_pile: int):
+        attack = Attack(self, defender, attacker_pile, defender_pile)
 
         attack_result = attack.resolve_attack()
 
-        losing_cards = ()
+        losing_cards = []
 
         if attack_result == AttackResult.ATTACKER_WINS:
-            losing_cards = [defender_realm.remove_top(defender_pile)]
+            losing_cards = [defender.realm.remove_top(defender_pile)]
         elif attack_result == AttackResult.DEFENDER_WINS:
             losing_cards = [self.realm.remove_top(attacker_pile)]
         elif attack_result == AttackResult.BOTH_LOSE:
-            losing_cards = [self.realm.remove_top(attacker_pile), defender_realm.remove_top(defender_pile)]
+            losing_cards = [self.realm.remove_top(attacker_pile), defender.realm.remove_top(defender_pile)]
         elif attack_result == AttackResult.BOTH_SURVIVE:
             losing_cards = []
         

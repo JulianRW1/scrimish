@@ -2,7 +2,7 @@
 
 var websocket;
 
-const IMAGE_SCALE = 50;
+const IMAGE_SCALE = 30;
 
 var activeGames = [];
 
@@ -38,8 +38,9 @@ let userPlayerColor = 'White';
 let selectedPile = -1;
 
 let userID;
+let gameID;
 
-let COOKIES = false;
+let USE_COOKIES = false;
 
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -53,7 +54,7 @@ window.addEventListener("DOMContentLoaded", () => {
     // Initialize the UI
     websocket.onopen = () => {
         console.log(document.cookie);
-        if (COOKIES) {
+        if (USE_COOKIES) {
             userID = getCookie('userID'); // get the userID cookie if it exists
             send(new Connection(userID));
         } else {
@@ -78,6 +79,8 @@ function initUI() {
 }
 
 function initGame(game_id) {
+
+    gameID = game_id;
 
     let initGameStateQuery = new Query('init game state');
     initGameStateQuery.game_id = game_id;
@@ -365,31 +368,27 @@ function cardClick(pile, realmColor, topCard) {
             // Card belongs to player
 
             // select the clicked card
-            flipCard(true, pile, realmColor, topCard);
+            flipCard(true, pile, topCard);
             selectedPile = pile;
         } 
     } else if (cardAlliance != userPlayerColor) {
         // Card belongs to opponent
 
-        flipCard(true, pile, realmColor, topCard);
-
         // perform attack
-        send(new Attack(attackPile=selectedPile, defensePile=pile, playerColor=userPlayerColor))
+        send(new Attack(selectedPile, pile, userPlayerColor));
 
-        // reset display
-        selectedPile = -1;
     } else if (pile == selectedPile && userPlayerColor == cardAlliance) {
         // card is already selected
 
         // deselect card
-        flipCard(false, pile, realmColor, topCard);
+        flipCard(false, pile, topCard);
         selectedPile = -1;
     } else {
         // Card is own card
 
         //switch selected pile
-        flipCard(false, selectedPile, realmColor, topCard);
-        flipCard(true, pile, realmColor, topCard);
+        flipCard(false, selectedPile, topCard);
+        flipCard(true, pile, topCard);
         selectedPile = pile;
     }
 }
@@ -398,9 +397,10 @@ function cardClick(pile, realmColor, topCard) {
  * 
  * @param {boolean} faceUp 
  */
-function flipCard(faceUp, pile, realmColor, topCard) {
+function flipCard(faceUp, pile, topCard) {
+    let realmColor = topCard.substring(0,1);
 
-    var currentImage = document.getElementById(realmColor + '_pile_' + pile + '_img');
+    let currentImage = document.getElementById(realmColor + '_pile_' + pile + '_img');
 
     if (faceUp) {
         // Get the current image
@@ -409,6 +409,77 @@ function flipCard(faceUp, pile, realmColor, topCard) {
         currentImage.src = CARD_IMAGES[realmColor + '_back'];
     }
 
+}
+
+async function attack(attack_event) {
+    // attack_event = {player_color, att_pile, def_pile, losers}
+    let playerColor = attack_event.player_color;
+    let attPile = attack_event.att_pile;
+    let defPile = attack_event.def_pile;
+    let losers = attack_event.losers;
+
+    let activeRealm
+    let inactiveRealm
+    if (playerColor == 'r') {
+        activeRealm = redRealm;
+        inactiveRealm = blueRealm;
+    } else if (playerColor == 'b') {
+        activeRealm = blueRealm;
+        inactiveRealm = redRealm;
+    } else {
+        throw 'in main.js - attack(): invalid player color';
+    }
+
+    let attCard = activeRealm[attPile][activeRealm[attPile].length - 1];
+    let defCard = inactiveRealm[defPile][inactiveRealm[defPile].length - 1];
+
+    // TODO - maybe animation?
+
+    // flip any previusly selected cards down
+    if (selectedPile != -1) {
+        let selectedCard = activeRealm[selectedPile][activeRealm[selectedPile].length - 1];
+        flipCard(false, selectedPile, selectedCard);
+    }
+
+    // flip attacker and defender
+    flipCard(true, attPile, attCard);
+    flipCard(true, defPile, defCard);
+    
+    // wait 
+    await pause(2);
+
+    // flip losers
+    losers.forEach((loser) => {
+        let loserPile;
+        let loserRealm;
+
+        if (loser == attCard) {
+            loserPile = attPile;
+            loserRealm = activeRealm;
+        } else {
+            loserPile = defPile;
+            loserRealm = inactiveRealm;
+        }
+
+        loserRealm[loserPile].pop();
+        console.log('loserRealm ' + loserRealm)
+        flipCard(false, loserPile, loser)
+    })
+
+    // wait 
+    await pause(1);
+
+    // flip winner
+    flipCard(false, attPile, attCard);
+    flipCard(false, defPile, defCard);
+
+    
+    // reset display
+    selectedPile = -1;
+}
+
+function pause(seconds) {
+    return new Promise(r => setTimeout(r, seconds * 1000));
 }
 
 /**
@@ -426,16 +497,27 @@ function recieveEvents(websocket) {
 
         } else if (event.type == 'set') {
             if (event.variable = 'userID') {
-                if (COOKIES) {
+                if (USE_COOKIES) {
                     setCookie('userID', event.value, false, 0);
                 }
             }
+
+        } else if (event.type == 'attack') {
+            attack(event);
 
         } else if (event.type == AVAILABLE_GAMES) {
             displayGamePanel(event.data);
             
         } else if (event.type == 'redirect') {
             document.location.href = event.url;
+
+        } else if (event.type == 'lose') {
+            console.log(event.player + ' lost');
+            if (event.player != userPlayerColor) {
+                console.log('You win!')
+            } else {
+                console.log('You lose.')
+            }
 
         } else if (event.type == 'init game state') {
             redRealm = event.redRealm;
@@ -512,8 +594,10 @@ class Attack extends Event {
     attackPile;
     defensePile;
     playerColor;
+    game_id;
     constructor(attackPile, defensePile, playerColor) {
         super('attack');
+        this.game_id = gameID;
         this.attackPile = attackPile;
         this.defensePile = defensePile;
         this.playerColor = playerColor;
