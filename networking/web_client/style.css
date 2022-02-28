@@ -1,3 +1,23 @@
+:root {
+    --card-scale: 5vw;
+    --card-width: calc(2.5*var(--card-scale));
+    --card-height: calc(3.5*var(--card-scale));
+
+/*  --setup-screen-card-scale: .8;
+    --setup-screen-card-width: calc(var(--setup-screen-card-scale) * var(--card-width));
+    --setup-screen-card-height: calc(var(--setup-screen-card-scale) * var(--card-height)); */
+    
+    /* --setup-screen-card-scale: 30px; */
+    --setup-screen-card-scale: 4vw;
+    --setup-screen-card-width: calc(2.5*var(--setup-screen-card-scale));
+    --setup-screen-card-height: calc(3.5*var(--setup-screen-card-scale));
+}
+
+.card {
+    width: var(--card-width);
+    height: var(--card-height);
+}
+
 .homepage {
     display: flex;
     flex-flow: row nowrap;
@@ -82,6 +102,65 @@ td {
     background-color: aquamarine;
 } 
 
+
+.setUpScreen {
+    display: flex;
+    flex-flow: column nowrap;
+    width: 100vw;
+    height: 100vh;
+}
+
+.realmSetup {
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content:space-around;
+}
+
+.setUpPileElement {
+    /* position: relative; */
+    display: flex;
+    flex-flow: column nowrap;
+    align-items: center;
+    width: 20%;
+    height: 100%;
+    padding: .25rem;
+    height: calc(100% + calc(var(--setup-screen-card-height) * .6));
+}
+
+.setUpCardElement {
+
+    /* position: absolute; */
+    /* outline-style: solid;
+    outline-color: black; */
+    border-top: 1px solid #000; 
+    border-radius: 5px 5px 0px 0px;
+    background-color: rgb(128, 128, 128, 0.5);
+    width: var(--setup-screen-card-width);
+    height: calc(.4 * var(--setup-screen-card-height));
+}
+
+.availableCardsSetup {
+    overflow-x: scroll;
+    white-space: nowrap;
+    overflow-y: hidden;
+
+    max-width: 80%;
+    /* display: flex;
+    flex-flow: row wrap; */
+    margin-top: calc(.6 * var(--setup-screen-card-height));
+    margin-left: auto;
+    margin-right: auto;
+
+    min-height: var(--setup-screen-card-height);
+}
+
+.setupCard {
+    width: var(--setup-screen-card-width);
+    height: var(--setup-screen-card-height);
+
+}
+
+
 .board {
     background-color: blue;
     display: flex;
@@ -100,8 +179,8 @@ td {
 }
 
 body {
-    background-color: gray;
-    margin: 0px;
-    padding: 0px;
+    background-color:rgb(48, 49, 49);
+    margin: 0px 0px;
+    padding: 0px 0px;
     color: white;
 }

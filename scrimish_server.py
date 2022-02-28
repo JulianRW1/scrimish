@@ -145,9 +145,11 @@ async def query(event_obj, user_id, websocket):
             answer = {'type': event_obj.get('dataType'), 'data': resulting_list}
 
         if event_obj.get('dataType') == 'init game state':
+
+            game_id = event_obj.get('game_id')
             
             try :
-                game, connected, creator = GAMES_IN_PROGRESS[event_obj.get('game_id')]
+                game, connected, creator = GAMES_IN_PROGRESS[game_id]
             except KeyError:
                 print('game not found')
                 await websocket.send(json.dumps({'type': 'redirect', 'url': '/'}))
@@ -163,7 +165,7 @@ async def query(event_obj, user_id, websocket):
             
             connected.append(User(user_id, websocket))
 
-            red_realm_output, blue_realm_output = get_realms_as_letters(event_obj.get('game_id'))
+            red_realm_output, blue_realm_output = get_realms_as_letters(game_id)
             
             answer = {'type': event_obj.get('dataType'), 'redRealm': red_realm_output, 'blueRealm': blue_realm_output, 'player_color': player_color}
 
@@ -196,7 +198,6 @@ def new_game(event_obj, user_id, websocket):
 async def attack(event_obj, user_id, websocket):
 
     # event obj = {attack_pile, game_id, defense_pile, player_color}
-    print('ev_obj: ' + json.dumps(event_obj))
     player_color = event_obj.get("playerColor")
     attack_pile = event_obj.get('attackPile')
     defense_pile = event_obj.get('defensePile')

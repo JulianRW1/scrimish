@@ -13,10 +13,8 @@
 
 # Table(blue_player, red_player).set_up()
 
-import json
 from alliance import Alliance
 from moves.attack import Attack
-from moves.move import Move
 from player.player import Player
 
 

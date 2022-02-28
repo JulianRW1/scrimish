@@ -4,6 +4,9 @@ var websocket;
 
 const IMAGE_SCALE = 30;
 
+const REALM_SIZE = 5;
+const MAX_PILE_SIZE = 5;
+
 var activeGames = [];
 
 const AVAILABLE_GAMES = 'available games';
@@ -33,18 +36,18 @@ const CARD_IMAGES = {
 
 let blueRealm = [];
 let redRealm = [];
-let userPlayerColor = 'White';
+let userPlayerColor = "'r' or 'b'";
 
 let selectedPile = -1;
 
 let userID;
 let gameID;
 
-let USE_COOKIES = false;
-
+const USE_COOKIES = false;
 
 window.addEventListener("DOMContentLoaded", () => {
     // Open WebSocket connection and register event handlers
+
     // websocket = new WebSocket("ws://192.168.1.17:8001/"); 
     websocket = new WebSocket("ws://localhost:8001/"); 
 
@@ -82,9 +85,116 @@ function initGame(game_id) {
 
     gameID = game_id;
 
-    let initGameStateQuery = new Query('init game state');
-    initGameStateQuery.game_id = game_id;
-    send(initGameStateQuery);
+    createSetupScreen(game_id);
+
+
+    // // display realms
+    // let initGameStateQuery = new Query('init game state');
+    // initGameStateQuery.game_id = game_id;
+    // send(initGameStateQuery);
+}
+
+function createSetupScreen() {
+    let setUpScreen = document.createElement('div');
+    setUpScreen.className = 'setUpScreen';
+    document.body.appendChild(setUpScreen);
+
+    let realmSetup = document.createElement('div');
+    realmSetup.className = 'realmSetup';
+    setUpScreen.appendChild(realmSetup);
+
+    let xOffset = 5;
+    let yOffset = 30;
+
+    for (let pile = 0; pile < REALM_SIZE; pile++) {
+        let setUpPileElement = document.createElement('div');
+        setUpPileElement.className = 'setUpPileElement';
+        realmSetup.appendChild(setUpPileElement);
+        
+        for (let card = 0; card < MAX_PILE_SIZE; card++) {
+
+            let setUpCardElement = document.createElement('div');
+            setUpCardElement.className = 'setUpCardElement';
+
+            setUpCardElement.ondragover = function (event) {
+                allowDrop(event);
+            }
+            setUpCardElement.ondrop = function (event) {
+                let img = document.getElementById(event.dataTransfer.getData('img'));
+                if (!setUpCardElement.hasChildNodes()) {
+                    drop(event);
+                }
+            }
+            setUpCardElement.id = 'cardslot' + card;
+
+            setUpPileElement.appendChild(setUpCardElement);
+
+            // let img = createImage(CARD_IMAGES['b_back'], 'setupCard', null);
+            // setUpCardElement.appendChild(img);
+        }
+    }
+    let availableCardsQueue = document.createElement('div');
+    availableCardsQueue.className = 'availableCardsSetup';
+    setUpScreen.appendChild(availableCardsQueue);
+
+    addCardsToQueue(availableCardsQueue);
+
+    // if user drags card onto empty space place back in queue
+    setUpScreen.ondragover = function (event) {
+        allowDrop(event);
+    }
+    setUpScreen.ondrop = function (event) {
+
+        if (document.getElementById(event.dataTransfer.getData('img')) == event.target) {
+            //don't return the element to the queue if it is dropped on its old square
+            return
+        }
+        
+        var data = event.dataTransfer.getData("img");
+        let element = document.getElementById(data);
+        if (event.target.className != 'setUpCardElement') {
+            availableCardsQueue.appendChild(element);
+        }
+    }
+}
+
+function addCardsToQueue(queueElement) {
+    const TOTAL_CARDS = [
+        '1', '1', '1', '1', '1',
+        '2', '2', '2', '2', '2',
+        '3', '3', '3', 
+        '4', '4', '4', 
+        '5', '5', 
+        '6', '6',
+        'A', 'A', 
+        'S', 'S', 
+        'C'
+    ];
+    for (let card = 0; card < TOTAL_CARDS.length; card++) {
+        // TODO: make based on player color
+        let img = createImage(CARD_IMAGES['r' + '_' + TOTAL_CARDS[card]], 'setupCard', null);
+        img.draggable = true;
+        img.ondragstart = function (event) {
+            drag(event);
+        }
+        img.id = 'img' + card;
+        queueElement.appendChild(img);
+    }
+}
+
+function allowDrop(ev) {
+    ev.preventDefault();
+}
+  
+function drag(ev) {
+    ev.dataTransfer.setData("img", ev.target.id);
+}
+  
+function drop(ev) {
+    ev.preventDefault();
+    var data = ev.dataTransfer.getData("img");
+    let img = document.getElementById(data);
+    ev.target.appendChild(img);
 }
 
 function initHomepage() {
@@ -322,16 +432,19 @@ function createBoard() {
             const pileElement = document.createElement("div");
             pileElement.className = "pile";
             pileElement.id = realmColor + '_pile_' + pile;
+            
 
-            let topCard = currentRealm[pile][currentRealm[pile].length - 1];
-            imgPath = CARD_IMAGES[realmColor + '_back'];
+            if (currentRealm[pile].length != 0) {
+                // let topCard = currentRealm[pile][currentRealm[pile].length - 1];
+                imgPath = CARD_IMAGES[realmColor + '_back'];
 
-            img = createImage(imgPath, IMAGE_SCALE, cardClick.bind(null, pile, realmColor, topCard));
-            img.id = pileElement.id + '_img';
+                img = createImage(imgPath, 'card', cardClick.bind(null, pile, realmColor));
+                img.id = pileElement.id + '_img';
 
-            pileElement.appendChild(img);
+                pileElement.appendChild(img);
 
-            realmElement.appendChild(pileElement);
+                realmElement.appendChild(pileElement);
+            }
         }
         board.append(realmElement);
     };
@@ -344,19 +457,28 @@ function createBoard() {
  * @param {*} callback 
  * @returns 
  */
-function createImage(src, img_scale, callback) {
+function createImage(src, className, callback) {
     var image = new Image();
     image.src = src;
-    image.onclick = callback;
-    image.width = 2.5 * img_scale;
-    image.height = 3.5 * img_scale;
+    if (callback != null) {
+        image.onclick = callback;
+    }
+    image.className = className;
     return image;
 }
 
 /**
  * Event handler for clicks on card images
  */
-function cardClick(pile, realmColor, topCard) {
+function cardClick(pile, realmColor) {
+
+    let cardRealm = 'none';
+    if (realmColor == 'b') {
+        cardRealm = blueRealm;
+    } else if (realmColor == 'r') {
+        cardRealm = redRealm;
+    }
+    let topCard = cardRealm[pile][cardRealm[pile].length - 1];
 
     let pileElement = document.getElementById(realmColor + '_pile_' + pile);
 
@@ -452,27 +574,42 @@ async function attack(attack_event) {
     losers.forEach((loser) => {
         let loserPile;
         let loserRealm;
+        let loserColor;
 
         if (loser == attCard) {
             loserPile = attPile;
             loserRealm = activeRealm;
+            loserColor = attCard.substring(0,1);
         } else {
             loserPile = defPile;
             loserRealm = inactiveRealm;
+            loserColor = defCard.substring(0,1);
         }
 
         loserRealm[loserPile].pop();
-        console.log('loserRealm ' + loserRealm)
-        flipCard(false, loserPile, loser)
+
+        if (loserRealm[loserPile].length != 0) {
+            flipCard(false, loserPile, loser)
+            
+        } else {
+            let pileElement = document.getElementById(loserColor + '_pile_' + loserPile);
+            pileElement.remove();
+            return;
+        }
+
     })
 
+    
     // wait 
     await pause(1);
 
     // flip winner
-    flipCard(false, attPile, attCard);
-    flipCard(false, defPile, defCard);
-
+    if (activeRealm[attPile].length != 0) {
+        flipCard(false, attPile, attCard);
+    }
+    if (inactiveRealm[defPile].length != 0) {
+        flipCard(false, defPile, defCard);
+    }
     
     // reset display
     selectedPile = -1;
