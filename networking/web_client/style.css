@@ -103,7 +103,7 @@ td {
 } 
 
 
-.setUpScreen {
+.setupScreen {
     display: flex;
     flex-flow: column nowrap;
     width: 100vw;
@@ -116,7 +116,7 @@ td {
     justify-content:space-around;
 }
 
-.setUpPileElement {
+.setupPileElement {
     /* position: relative; */
     display: flex;
     flex-flow: column nowrap;
@@ -127,7 +127,7 @@ td {
     height: calc(100% + calc(var(--setup-screen-card-height) * .6));
 }
 
-.setUpCardElement {
+.setupCardElement {
 
     /* position: absolute; */
     /* outline-style: solid;
@@ -145,9 +145,8 @@ td {
     overflow-y: hidden;
 
     max-width: 80%;
-    /* display: flex;
-    flex-flow: row wrap; */
-    margin-top: calc(.6 * var(--setup-screen-card-height));
+    /* space the available cards out */
+    margin-top: calc(.7 * var(--setup-screen-card-height));
     margin-left: auto;
     margin-right: auto;
 
@@ -157,7 +156,15 @@ td {
 .setupCard {
     width: var(--setup-screen-card-width);
     height: var(--setup-screen-card-height);
+}
 
+.continueToGameBtn {
+    width: 10rem;
+    height: 2rem;
+    position: sticky;
+    bottom: 1rem;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 

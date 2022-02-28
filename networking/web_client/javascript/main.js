@@ -96,7 +96,8 @@ function initGame(game_id) {
 
 function createSetupScreen() {
     let setUpScreen = document.createElement('div');
-    setUpScreen.className = 'setUpScreen';
+    setUpScreen.className = 'setupScreen';
+    setUpScreen.id = 'setupScreen';
     document.body.appendChild(setUpScreen);
 
     let realmSetup = document.createElement('div');
@@ -108,13 +109,14 @@ function createSetupScreen() {
 
     for (let pile = 0; pile < REALM_SIZE; pile++) {
         let setUpPileElement = document.createElement('div');
-        setUpPileElement.className = 'setUpPileElement';
+        setUpPileElement.className = 'setupPileElement';
+        setUpPileElement.id = 'setupPile' + pile;
         realmSetup.appendChild(setUpPileElement);
         
         for (let card = 0; card < MAX_PILE_SIZE; card++) {
 
             let setUpCardElement = document.createElement('div');
-            setUpCardElement.className = 'setUpCardElement';
+            setUpCardElement.className = 'setupCardElement';
 
             setUpCardElement.ondragover = function (event) {
                 allowDrop(event);
@@ -123,6 +125,12 @@ function createSetupScreen() {
                 let img = document.getElementById(event.dataTransfer.getData('img'));
                 if (!setUpCardElement.hasChildNodes()) {
                     drop(event);
+
+                    if (!availableCardsQueue.hasChildNodes()) {
+                        let continueToGameBtn = 
+                                makeButton(setUpScreen, 'Continue', 'continueToGameBtn', continueToGame);
+                        setUpScreen.appendChild(continueToGameBtn);
+                    }
                 }
             }
             setUpCardElement.id = 'cardslot' + card;
@@ -139,22 +147,38 @@ function createSetupScreen() {
 
     addCardsToQueue(availableCardsQueue);
 
-    // if user drags card onto empty space place back in queue
+
     setUpScreen.ondragover = function (event) {
         allowDrop(event);
     }
+
     setUpScreen.ondrop = function (event) {
+        // if user drags card onto empty space place back in queue
 
         if (document.getElementById(event.dataTransfer.getData('img')) == event.target) {
             //don't return the element to the queue if it is dropped on its old square
-            return
+            return;
         }
         
-        var data = event.dataTransfer.getData("img");
-        let element = document.getElementById(data);
-        if (event.target.className != 'setUpCardElement') {
-            availableCardsQueue.appendChild(element);
+        var img = event.dataTransfer.getData("img");
+        let imgElement = document.getElementById(img);
+
+
+        if (event.target.className != 'setupCardElement') {
+            // If the drop was not on a card slot
+            availableCardsQueue.appendChild(imgElement);
+
+            // Check if the "continue" button should be removed from screen
+            setUpScreen.childNodes.forEach((childNode, key, parent) => {
+                console.log('className = ' + childNode.className);
+                if (childNode.className == 'continueToGameBtn') {
+                    console.log(childNode.className + ' == continueToGameBtn => True');
+                    childNode.remove();
+                }
+            });
         }
+
+        
     }
 }
 
@@ -195,6 +219,24 @@ function drop(ev) {
     var data = ev.dataTransfer.getData("img");
     let img = document.getElementById(data);
     ev.target.appendChild(img);
+}
+
+function continueToGame() {
+    let setUpScreenElement = document.getElementById('setupScreen');
+    setUpScreenElement.remove();
+
+    send(new Data(getUserCreatedRealm()));
+
+    // display realms
+    let initGameStateQuery = new Query('init game state');
+    initGameStateQuery.game_id = gameID;
+    send(initGameStateQuery);
+}
+
+function getUserCreatedRealm() {
+    for (let pile = 0; pile < REALM_SIZE; pile++) {
+        let pile = document.getElementById('setup')
+    }
 }
 
 function initHomepage() {
@@ -762,6 +804,13 @@ class JoinGame extends Event {
     constructor(id) {
         super('join');
         this.id = id;
+    }
+}
+
+class Data extends Event {
+    constructor(data) {
+        super('data');
+        this.data = data;
     }
 }
 
