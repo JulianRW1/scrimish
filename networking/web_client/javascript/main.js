@@ -74,24 +74,31 @@ window.addEventListener("DOMContentLoaded", () => {
 
 function initUI() {
     let params = new URLSearchParams(window.location.search);
-    if (params.has('game')) {
+    if (params.has('setup')) {
+        initSetup(params.get('setup'));
+
+    } else if (params.has('game')) {
         initGame(params.get('game'));
+
     } else {
         initHomepage();
     }
+}
+
+function initSetup(game_id) {
+    gameID = game_id;
+
+    createSetupScreen(game_id);
 }
 
 function initGame(game_id) {
 
     gameID = game_id;
 
-    createSetupScreen(game_id);
-
-
-    // // display realms
-    // let initGameStateQuery = new Query('init game state');
-    // initGameStateQuery.game_id = game_id;
-    // send(initGameStateQuery);
+    // display realms
+    let initGameStateQuery = new Query('init game state');
+    initGameStateQuery.game_id = game_id;
+    send(initGameStateQuery);
 }
 
 function createSetupScreen() {
@@ -104,8 +111,8 @@ function createSetupScreen() {
     realmSetup.className = 'realmSetup';
     setUpScreen.appendChild(realmSetup);
 
-    let xOffset = 5;
-    let yOffset = 30;
+    // let xOffset = 5;
+    // let yOffset = 30;
 
     for (let pile = 0; pile < REALM_SIZE; pile++) {
         let setUpPileElement = document.createElement('div');
@@ -136,9 +143,6 @@ function createSetupScreen() {
             setUpCardElement.id = 'cardslot' + card;
 
             setUpPileElement.appendChild(setUpCardElement);
-
-            // let img = createImage(CARD_IMAGES['b_back'], 'setupCard', null);
-            // setUpCardElement.appendChild(img);
         }
     }
     let availableCardsQueue = document.createElement('div');
@@ -225,7 +229,7 @@ function continueToGame() {
     let setUpScreenElement = document.getElementById('setupScreen');
     setUpScreenElement.remove();
 
-    send(new Data(getUserCreatedRealm()));
+    send(new Data(gameID, 'realm', getUserCreatedRealm()));
 
     // display realms
     let initGameStateQuery = new Query('init game state');
@@ -236,6 +240,7 @@ function continueToGame() {
 function getUserCreatedRealm() {
     for (let pile = 0; pile < REALM_SIZE; pile++) {
         let pile = document.getElementById('setup')
+        //TODO: Get card order from screen
     }
 }
 
@@ -699,10 +704,12 @@ function recieveEvents(websocket) {
             }
 
         } else if (event.type == 'init game state') {
-            redRealm = event.redRealm;
-            blueRealm = event.blueRealm;
 
             userPlayerColor = event.player_color;
+            
+            // TODO: wait for both players to create a realm.
+            redRealm = event.redRealm;
+            blueRealm = event.blueRealm;
 
             createBoard();
         } else {
@@ -808,9 +815,11 @@ class JoinGame extends Event {
 }
 
 class Data extends Event {
-    constructor(data) {
+    constructor(gameID, dataType, data) {
         super('data');
+        this.dataType = dataType;
         this.data = data;
+        this.gameID = gameID;
     }
 }
 

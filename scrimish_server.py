@@ -12,9 +12,10 @@ CREATED_GAMES = {}
 GAMES_IN_PROGRESS = {}
 
 class User:
-    def __init__(self, user_id, websocket) -> None:
+    def __init__(self, user_id, websocket, player_color) -> None:
         self.user_id = user_id
         self.websocket = websocket
+        self.player_color = player_color
 
     
     def get_user_id(self) -> str:
@@ -59,9 +60,8 @@ async def join(websocket, game_id, user_id):
     except KeyError:
         # TODO - send error message
         return
-    # if user_id == 
 
-    connected.append(User(user_id, websocket))
+    connected.append(User(user_id, websocket, 'r'))
 
     if (len(connected) < 2):
         del CREATED_GAMES[game_id]
@@ -74,9 +74,9 @@ async def join(websocket, game_id, user_id):
     
     print(f'[GAME JOINED] - {user_id} joined game {game_id}')
 
-    await websocket.send(json.dumps({'type': 'joined game', 'id': game_id, 'userID': user_id}))
+    await websocket.send(json.dumps({'type': 'joined game', 'id': game_id, 'userID': user_id, 'userColor': 'r/b'})) # TODO
 
-    websockets.broadcast(get_sockets_from_users(connected), json.dumps({'type': 'redirect', 'url': ('?game=' + game_id)}))
+    websockets.broadcast(get_sockets_from_users(connected), json.dumps({'type': 'redirect', 'url': ('?setup=' + game_id)}))
 
     # TODO - handle game leaving
 
@@ -110,7 +110,7 @@ async def new_connection(websocket) -> int:
                 user_id = event.get('userID')
                 if user_id == '':
                     user_id = generate_user_id(USERS)
-                    USERS.append(User(user_id, websocket))
+                    USERS.append(User(user_id, websocket, ''))
                     await websocket.send(json.dumps({'type': 'set', 'variable': 'userID', 'value': user_id}))
                 else:
                     user = get_user_by_id(USERS, user_id)
@@ -156,18 +156,26 @@ async def query(event_obj, user_id, websocket):
                 return
 
             # give the first player the color blue
-            print(f'user_id == creator - {user_id} == {creator} => {user_id == creator}')
-            if user_id == creator:
-                player_color = 'b'
-            else:
-                # give the second player the color red
-                player_color = 'r'
+            # print(f'user_id == creator - {user_id} == {creator} => {user_id == creator}')
+            # if user_id == creator:
+            #     player_color = 'b'
+            # else:
+            #     # give the second player the color red
+            #     player_color = 'r'
             
-            connected.append(User(user_id, websocket))
+            player_color = 'white'
+            for user in connected:
+                if user.get_user_id() == user_id:
+                    user.websocket = websocket
+                    player_color = user.player_color
+                    print(f'[USER] color: {user.player_color}, id: {user.get_user_id()}, websocket: {user.get_socket()}')
+
+            # connected.append(User(user_id, websocket))
 
             red_realm_output, blue_realm_output = get_realms_as_letters(game_id)
             
             answer = {'type': event_obj.get('dataType'), 'redRealm': red_realm_output, 'blueRealm': blue_realm_output, 'player_color': player_color}
+            print('[ANSWER] = ' + str(answer))
 
         if event_obj.get('dataType') == 'player color':
             game, connected, creator = CREATED_GAMES[event_obj.get('game_id')]
@@ -190,7 +198,7 @@ def new_game(event_obj, user_id, websocket):
 
     id = generate_game_id(available_game_ids) # generate id
 
-    CREATED_GAMES[id] = (Scrimish(id, event_obj.get('level'), event_obj.get('speed')), [User(user_id, websocket)], user_id)
+    CREATED_GAMES[id] = (Scrimish(id, event_obj.get('level'), event_obj.get('speed')), [User(user_id, websocket, 'b')], user_id)
     
     print(f'[GAME CREATED] - {user_id} created game {id}')
 
@@ -247,6 +255,11 @@ async def attack(event_obj, user_id, websocket):
                 'type': 'lose',
                 'player': player
             }))
+
+    
+def process_data(data):
+    if data.get('dataType') == '':
+        pass
     
 
 async def process_event(user_id, event, websocket):
@@ -272,6 +285,9 @@ async def process_event(user_id, event, websocket):
 
     elif ev_type == 'query':
         await query(event_obj, user_id, websocket)
+
+    elif ev_type == 'data':
+        process_data(event_obj)
     else:
         raise Exception(f'Illegal event type! ({ev_type})')
 
