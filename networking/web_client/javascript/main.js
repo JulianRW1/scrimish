@@ -45,6 +45,8 @@ let gameID;
 
 const USE_COOKIES = false;
 
+// TODO - add game chat (with server messages)
+
 window.addEventListener("DOMContentLoaded", () => {
     // Open WebSocket connection and register event handlers
 
@@ -74,6 +76,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
 function initUI() {
     let params = new URLSearchParams(window.location.search);
+
     if (params.has('setup')) {
         initSetup(params.get('setup'));
 
@@ -88,6 +91,10 @@ function initUI() {
 function initSetup(game_id) {
     gameID = game_id;
 
+    if (!USE_COOKIES) {
+        send(new ConnectToGame(gameID));
+    }
+
     createSetupScreen(game_id);
 }
 
@@ -95,13 +102,19 @@ function initGame(game_id) {
 
     gameID = game_id;
 
-    // display realms
-    let initGameStateQuery = new Query('init game state');
-    initGameStateQuery.game_id = game_id;
+    
+    if (!USE_COOKIES) {
+        send(new ConnectToGame(gameID));
+    }
+
+    //display realms
+    let initGameStateQuery = new Query('initialGameState');
+    initGameStateQuery.gameID = gameID;
     send(initGameStateQuery);
 }
 
 function createSetupScreen() {
+
     let setUpScreen = document.createElement('div');
     setUpScreen.className = 'setupScreen';
     setUpScreen.id = 'setupScreen';
@@ -140,7 +153,7 @@ function createSetupScreen() {
                     }
                 }
             }
-            setUpCardElement.id = 'cardslot' + card;
+            setUpCardElement.id = 'cardslot' + "_" + pile + "_" + card;
 
             setUpPileElement.appendChild(setUpCardElement);
         }
@@ -150,6 +163,20 @@ function createSetupScreen() {
     setUpScreen.appendChild(availableCardsQueue);
 
     addCardsToQueue(availableCardsQueue);
+
+    // TODO - temporary
+    document.addEventListener('keyup', (e) => {
+        if (e.code === "ArrowUp") {
+            for (let i = 0; i < 25; i++) {
+                let img = document.getElementById('img' + i);
+                cardSlot = document.getElementById('cardslot_' + Math.floor(i/5) + '_' + (i % 5));
+                cardSlot.appendChild(img);
+            }
+            //setup continue button
+            let continueToGameBtn = makeButton(setUpScreen, 'Continue', 'continueToGameBtn', continueToGame);
+            setUpScreen.appendChild(continueToGameBtn);
+        }
+    });
 
 
     setUpScreen.ondragover = function (event) {
@@ -174,9 +201,7 @@ function createSetupScreen() {
 
             // Check if the "continue" button should be removed from screen
             setUpScreen.childNodes.forEach((childNode, key, parent) => {
-                console.log('className = ' + childNode.className);
                 if (childNode.className == 'continueToGameBtn') {
-                    console.log(childNode.className + ' == continueToGameBtn => True');
                     childNode.remove();
                 }
             });
@@ -202,10 +227,10 @@ function addCardsToQueue(queueElement) {
         // TODO: make based on player color
         let img = createImage(CARD_IMAGES['r' + '_' + TOTAL_CARDS[card]], 'setupCard', null);
         img.draggable = true;
+        img.id = 'img' + card;
         img.ondragstart = function (event) {
             drag(event);
         }
-        img.id = 'img' + card;
         queueElement.appendChild(img);
     }
 }
@@ -226,22 +251,62 @@ function drop(ev) {
 }
 
 function continueToGame() {
-    let setUpScreenElement = document.getElementById('setupScreen');
-    setUpScreenElement.remove();
 
-    send(new Data(gameID, 'realm', getUserCreatedRealm()));
+
+    // let realmData = new Data(gameID, 'realm', getUserCreatedRealm());
+    // send(realmData);
+
+    send(new ContinueToGame(gameID, getUserCreatedRealm()))
+
 
     // display realms
-    let initGameStateQuery = new Query('init game state');
-    initGameStateQuery.game_id = gameID;
-    send(initGameStateQuery);
+    // let initGameStateQuery = new Query('init game state');
+    // initGameStateQuery.game_id = gameID;
+    // send(initGameStateQuery); 
 }
 
+/**
+ * Extracts the card order from the setup screen
+ * @returns a 2D str array of the card order 
+ */
 function getUserCreatedRealm() {
+    let realm = Array.from(Array(REALM_SIZE), () => new Array(MAX_PILE_SIZE));
     for (let pile = 0; pile < REALM_SIZE; pile++) {
-        let pile = document.getElementById('setup')
-        //TODO: Get card order from screen
+        for (let cardSlot = 0; cardSlot < MAX_PILE_SIZE; cardSlot++) {
+            let cardSlotElement = document.getElementById("cardslot_" + pile + "_" + (MAX_PILE_SIZE - cardSlot - 1));
+            let cardImage = cardSlotElement.getElementsByTagName('img')[0];
+            switch (cardImage.getAttribute("src")) {
+                case CARD_IMAGES['r_1']:
+                    realm[pile][cardSlot] = '1';
+                    break;
+                case CARD_IMAGES['r_2']:
+                    realm[pile][cardSlot] = '2';
+                    break;
+                case CARD_IMAGES['r_3']:
+                    realm[pile][cardSlot] = '3';
+                    break;
+                case CARD_IMAGES['r_4']:
+                    realm[pile][cardSlot] = '4';
+                    break;
+                case CARD_IMAGES['r_5']:
+                    realm[pile][cardSlot] = '5';
+                    break;
+                case CARD_IMAGES['r_6']:
+                    realm[pile][cardSlot] = '6';
+                    break;
+                case CARD_IMAGES['r_A']:
+                    realm[pile][cardSlot] = 'A';
+                    break;
+                case CARD_IMAGES['r_S']:
+                    realm[pile][cardSlot] = 'S';
+                    break;
+                case CARD_IMAGES['r_C']:
+                    realm[pile][cardSlot] = 'C';
+                    break;
+            }
+        }
     }
+    return realm;
 }
 
 function initHomepage() {
@@ -417,7 +482,6 @@ function makeButton(parent, text, className, callback) {
 }
 
 function joinGame(gameID) {
-    // TODO: handle game joining
     send(new JoinGame(gameID));
 }
 
@@ -680,10 +744,12 @@ function recieveEvents(websocket) {
             send(new Message('joined game'));
 
         } else if (event.type == 'set') {
-            if (event.variable = 'userID') {
+            if (event.variable == 'userID') {
                 if (USE_COOKIES) {
                     setCookie('userID', event.value, false, 0);
                 }
+            } else if (event.variable == 'playerColor') {
+                userPlayerColor = event.value;
             }
 
         } else if (event.type == 'attack') {
@@ -696,24 +762,33 @@ function recieveEvents(websocket) {
             document.location.href = event.url;
 
         } else if (event.type == 'lose') {
-            console.log(event.player + ' lost');
+            // TODO - win message
             if (event.player != userPlayerColor) {
-                console.log('You win!')
+                alert('You win!')
             } else {
-                console.log('You lose.')
+                alert('You lose.')
             }
 
-        } else if (event.type == 'init game state') {
+        } 
+        else if (event.type == 'continueToGame') {
+            if (event.firstOrSecond == 'first') {
+                // TODO: Go to a wait screen
+            } 
+        } 
+        else if (event.type == 'initialGameState') {
 
-            userPlayerColor = event.player_color;
+            userPlayerColor = event.playerColor;
             
             // TODO: wait for both players to create a realm.
             redRealm = event.redRealm;
             blueRealm = event.blueRealm;
 
             createBoard();
+        } else if (event.type == 'message') {
+            // TODO: banner across top
+            alert(event.text)
         } else {
-            send(new Message('invalid type [ERROR]'))
+            send(new Message('invalid type error [' + event.type + ']'))
         }
     });
 }
@@ -814,12 +889,27 @@ class JoinGame extends Event {
     }
 }
 
+class ContinueToGame extends Event {
+    constructor(id, realm) {
+        super('continueToGame');
+        this.id = id;
+        this.realm = realm;
+    }
+}
+
 class Data extends Event {
     constructor(gameID, dataType, data) {
         super('data');
         this.dataType = dataType;
         this.data = data;
         this.gameID = gameID;
+    }
+}
+
+class ConnectToGame extends Event {
+    constructor(gameID) {
+        super('connectToGame');
+        this.id = gameID;
     }
 }
 

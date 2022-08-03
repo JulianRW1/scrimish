@@ -1,3 +1,4 @@
+from array import array
 import random
 from cards.card import Card
 from cards.card_type import CardType

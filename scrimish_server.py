@@ -1,7 +1,14 @@
 import asyncio
+from http import cookies
+from multiprocessing.sharedctypes import Value
+from sqlite3 import connect
+from telnetlib import GA
 from alliance import Alliance
 from cards.card import Card
+from cards.card_factory import CardFactory
 from cards.card_type import CardType
+import constants
+from realm import Realm
 from scrimish import Scrimish
 import websockets
 import json
@@ -10,6 +17,8 @@ from scrimish_server_utils import generate_game_id, generate_user_id
 USERS = []
 CREATED_GAMES = {}
 GAMES_IN_PROGRESS = {}
+
+USE_COOKIES = False
 
 class User:
     def __init__(self, user_id, websocket, player_color) -> None:
@@ -24,6 +33,10 @@ class User:
 
     def get_socket(self):
         return self.websocket
+
+    
+    def get_player_color(self):
+        return self.player_color
 
 
 def get_realms_as_letters(game_id):
@@ -46,6 +59,33 @@ def get_realms_as_letters(game_id):
     return red_realm_output, blue_realm_output
 
 
+def get_realm_from_letters(alliance, letters):
+    realm_cards = []
+    for pile in range(len(letters)):
+        realm_cards.append([])
+        for card in letters[pile]:
+            if card == '1':
+                realm_cards[pile].append(CardFactory.make_card(alliance, CardType.DAGGER))
+            if card == '2':
+                realm_cards[pile].append(CardFactory.make_card(alliance, CardType.SWORD))
+            if card == '3':
+                realm_cards[pile].append(CardFactory.make_card(alliance, CardType.MORNING_STAR))
+            if card == '4':
+                realm_cards[pile].append(CardFactory.make_card(alliance, CardType.WAR_AXE))
+            if card == '5':
+                realm_cards[pile].append(CardFactory.make_card(alliance, CardType.HALBERD))
+            if card == '6':
+                realm_cards[pile].append(CardFactory.make_card(alliance, CardType.LONGSWORD))
+            if card == 'A':
+                realm_cards[pile].append(CardFactory.make_card(alliance, CardType.ARCHER))
+            if card == 'S':
+                realm_cards[pile].append(CardFactory.make_card(alliance, CardType.SHIELD))
+            if card == 'C':
+                realm_cards[pile].append(CardFactory.make_card(alliance, CardType.CROWN))
+    return Realm(realm_cards)
+
+
+
 def get_card_as_string(card:Card):
     if card.alliance == Alliance.BLUE:
         return 'b_' + card.to_string()
@@ -58,7 +98,19 @@ async def join(websocket, game_id, user_id):
     try:
         game, connected, creator = CREATED_GAMES[game_id]
     except KeyError:
+        await websocket.send(json.dumps({'type': 'message', 'text': 'This game no longer exists!'}))
+
+        resulting_list = []
+        for game, connected, creator in CREATED_GAMES.values():
+            _game = {'id': game.id, 'level': game.level, 'speed': game.speed}
+            resulting_list.append(_game)
+
+        await websocket.send(json.dumps({'type': 'available games', 'data': resulting_list}))
         # TODO - send error message
+        return
+
+    if (creator == user_id):
+        await websocket.send(json.dumps({'type': 'message', 'text': 'Cannot join your own game!'}))
         return
 
     connected.append(User(user_id, websocket, 'r'))
@@ -75,11 +127,22 @@ async def join(websocket, game_id, user_id):
     print(f'[GAME JOINED] - {user_id} joined game {game_id}')
 
     await websocket.send(json.dumps({'type': 'joined game', 'id': game_id, 'userID': user_id, 'userColor': 'r/b'})) # TODO
+    
+    #Remove the users (because they will become a new user after redirect)
+    temp = connected
+    if (not USE_COOKIES):
+        connected = []
 
-    websockets.broadcast(get_sockets_from_users(connected), json.dumps({'type': 'redirect', 'url': ('?setup=' + game_id)}))
+    websockets.broadcast(get_sockets_from_users(temp), json.dumps({'type': 'redirect', 'url': ('?setup=' + game_id)}))
 
-    # TODO - handle game leaving
+    
 
+
+def connect_to_game(websocket, game_id, user_id):
+    game, connected, creator = GAMES_IN_PROGRESS[game_id]
+    
+    connected.append(get_user_by_id(USERS, user_id))
+    
 
 def get_sockets_from_users(users):
     sockets = []
@@ -100,7 +163,7 @@ async def new_connection(websocket) -> int:
     # TODO - hold username between sessions/reloads
     #       (Probably make login screen)
 
-    connected = False;
+    connected = False
     while not connected:
         # listen for connection event 
         try:
@@ -127,12 +190,22 @@ async def new_connection(websocket) -> int:
 
 
 def disconnection(user_id):
-    for user in USERS:
-        if user.get_user_id() == user_id:
-            USERS.remove(user)
-            break
-    print(f'[ACTIVE CONNECTIONS] {len(USERS)}')
+    if (USE_COOKIES):
+        pass
+    else:
+        for user in USERS:
+            if user.get_user_id() == user_id:
+                USERS.remove(user)
+                #USERS.remove(user)
+                break
+            
+    for entry in dict(CREATED_GAMES).values():
+        if user_id == entry[2]:
+            for id, game_info in dict(CREATED_GAMES).items():
+                if game_info == entry:
+                    del CREATED_GAMES[id]
 
+        print(f'[ACTIVE CONNECTIONS] {len(USERS)}')
 
 async def query(event_obj, user_id, websocket):
     
@@ -144,9 +217,9 @@ async def query(event_obj, user_id, websocket):
             
             answer = {'type': event_obj.get('dataType'), 'data': resulting_list}
 
-        if event_obj.get('dataType') == 'init game state':
+        if event_obj.get('dataType') == 'initialGameState':
 
-            game_id = event_obj.get('game_id')
+            game_id = event_obj.get('gameID')
             
             try :
                 game, connected, creator = GAMES_IN_PROGRESS[game_id]
@@ -154,27 +227,20 @@ async def query(event_obj, user_id, websocket):
                 print('game not found')
                 await websocket.send(json.dumps({'type': 'redirect', 'url': '/'}))
                 return
-
-            # give the first player the color blue
-            # print(f'user_id == creator - {user_id} == {creator} => {user_id == creator}')
-            # if user_id == creator:
-            #     player_color = 'b'
-            # else:
-            #     # give the second player the color red
-            #     player_color = 'r'
             
-            player_color = 'white'
-            for user in connected:
-                if user.get_user_id() == user_id:
-                    user.websocket = websocket
-                    player_color = user.player_color
-                    print(f'[USER] color: {user.player_color}, id: {user.get_user_id()}, websocket: {user.get_socket()}')
-
-            # connected.append(User(user_id, websocket))
-
             red_realm_output, blue_realm_output = get_realms_as_letters(game_id)
+
+            player_color = 'b or r'
+
+            if len(connected) % 2 == 0:
+                player_color = 'b'
+            elif len(connected) % 2 == 1:
+                player_color = 'r'
+            else:
+                raise Exception('[ERROR] - Too many connections to the game')
+
             
-            answer = {'type': event_obj.get('dataType'), 'redRealm': red_realm_output, 'blueRealm': blue_realm_output, 'player_color': player_color}
+            answer = {'type': 'initialGameState', 'redRealm': red_realm_output, 'blueRealm': blue_realm_output, 'playerColor': player_color}
             print('[ANSWER] = ' + str(answer))
 
         if event_obj.get('dataType') == 'player color':
@@ -214,12 +280,12 @@ async def attack(event_obj, user_id, websocket):
     try:
         game, connected, creator = GAMES_IN_PROGRESS[game_id]
     except KeyError:
-        print('in attack: game not found [ERROR]')
+        print('[ERROR] game not found (in attack)')
         # TODO - probably send error event to client
 
     if game.get_current_player() != player_color:
-        print(f"not {user_id}'s move [ERROR]")
-        # TODO - send error event to client (Illegal move) - not their turn
+        print(f"[ERROR] - not {user_id}'s move")
+        await websocket.send(json.dumps({'type': 'message', 'text': 'It is not your turn!'}))
         return
 
     current_player_realm = None
@@ -256,10 +322,49 @@ async def attack(event_obj, user_id, websocket):
                 'player': player
             }))
 
+
+async def continue_to_game(websocket, game_id, user_id, realm):
     
-def process_data(data):
-    if data.get('dataType') == '':
-        pass
+    try :
+        game, connected, creator = GAMES_IN_PROGRESS[game_id]
+    except KeyError:
+        print('game not found')
+        await websocket.send(json.dumps({'type': 'redirect', 'url': '/'}))
+        return
+
+    if game.blue_player.realm == None:
+        game.blue_player.realm = get_realm_from_letters(Alliance.BLUE, realm)
+        # send the player color
+        await websocket.send(json.dumps({'type': 'set', 'variable': 'playerColor', 'value': 'b'}))
+
+        # tell the player to wait for their opponent
+        await websocket.send(json.dumps({'type': 'continueToGame', 'firstOrSecond': "first"}))
+
+    elif game.red_player.realm == None:
+        game.red_player.realm = get_realm_from_letters(Alliance.RED, realm)
+
+        
+        temp = connected
+        # clear connected list
+        if (not USE_COOKIES):
+            connected = []
+
+        websockets.broadcast(get_sockets_from_users(temp), json.dumps({'type': 'redirect', 'url': '?game=' + game_id}))
+
+        # # send the player color
+        # await websocket.send(json.dumps({'type': 'set', 'variable': 'playerColor', 'value': 'r'}))
+
+        # # broadcast a message to start game
+        # red_realm_output, blue_realm_output = get_realms_as_letters(game_id)
+        # event = {'type': 'continueToGame', 'firstOrSecond': 'second', 'gameID': game_id, 'redRealm': red_realm_output, 'blueRealm': blue_realm_output}
+        
+        # print('[BROADCASTING]')
+        # websockets.broadcast(get_sockets_from_users(connected), json.dumps(event))
+
+    
+def process_data(data, user_id, websocket):
+    pass
+      
     
 
 async def process_event(user_id, event, websocket):
@@ -283,11 +388,18 @@ async def process_event(user_id, event, websocket):
     elif ev_type == 'join':
         await join(websocket, event_obj.get('id'), user_id)
 
+    elif ev_type == 'connectToGame': 
+        connect_to_game(websocket, event_obj.get('id'), user_id)
+
+    elif ev_type == 'continueToGame':
+        await continue_to_game(websocket, event_obj.get('id'), user_id, event_obj.get('realm'))
+
     elif ev_type == 'query':
         await query(event_obj, user_id, websocket)
 
     elif ev_type == 'data':
-        process_data(event_obj)
+        process_data(event_obj, user_id, websocket)
+
     else:
         raise Exception(f'Illegal event type! ({ev_type})')
 

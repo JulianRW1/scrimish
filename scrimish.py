@@ -28,12 +28,20 @@ class Scrimish:
     realms = []
 
     
-    def __init__(self, id: str, level:str, speed:str) -> None:
+    def __init__(self, id: str, level:str, speed:str, blue_realm=None, red_realm=None) -> None:
         self.id = id
         self.level = level
         self.speed = speed
-        self.blue_player = Player(Alliance.BLUE)
-        self.red_player = Player(Alliance.RED)
+        
+        if (blue_realm):
+            self.blue_player = Player(Alliance.BLUE, blue_realm)
+        else:
+            self.blue_player = Player(Alliance.BLUE)
+
+        if red_realm:
+            self.red_player = Player(Alliance.RED, red_realm)
+        else:
+            self.red_player = Player(Alliance.RED)
 
 
     def play_attack(self, player_color, attack_pile, defense_pile):
@@ -67,7 +75,6 @@ class Scrimish:
             return 'b'
             # TODO - make first player the player who finishes setting up first
 
-        print(len(self.move_list))
         last_move = self.move_list[len(self.move_list) - 1]
         if last_move.player.alliance == Alliance.BLUE:
             return 'r'

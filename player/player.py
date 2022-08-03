@@ -19,14 +19,16 @@ class Player:
         elif alliance == Alliance.RED:
             self.color = 'Red'
         
-        if realm == None:
-            if alliance == Alliance.BLUE:
-                self.realm = Realm(copy.deepcopy(constants.BLUE_STANDARD_CARD_SET))
-            elif alliance == Alliance.RED:
-                self.realm = Realm(copy.deepcopy(constants.RED_STANDARD_CARD_SET))
-            self.realm.shuffle()
-            self.realm.bury_crown()
-        else:
+        # if realm == None:
+        #     if alliance == Alliance.BLUE:
+        #         self.realm = Realm(copy.deepcopy(constants.BLUE_STANDARD_CARD_SET))
+        #     elif alliance == Alliance.RED:
+        #         self.realm = Realm(copy.deepcopy(constants.RED_STANDARD_CARD_SET))
+        #     self.realm.shuffle()
+        #     self.realm.bury_crown()
+        # else:
+        #     self.realm = Realm(realm)
+        if realm != None:
             self.realm = Realm(realm)
 
 
