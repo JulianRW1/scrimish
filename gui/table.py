@@ -1,7 +1,5 @@
-from cmath import pi
 import time
 from tkinter import *
-from xmlrpc.client import boolean
 from PIL import ImageTk, Image
 from alliance import Alliance
 from cards.card import Card

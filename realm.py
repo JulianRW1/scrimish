@@ -1,3 +1,4 @@
+from array import array
 import random
 from cards.card import Card
 from cards.card_type import CardType
@@ -69,7 +70,7 @@ class Realm():
                 all_cards.append(card)
 
         for pile in self._data:
-            for card in range(len(self._data)):
+            for card in range(len(pile)):
                 rand_card = random.Random().choice(all_cards)
                 all_cards.remove(rand_card)
                 pile[card] = rand_card
@@ -91,3 +92,7 @@ class Realm():
             temp = crown_pile[constants.BOTTOM_PILE_INDEX]
             crown_pile[constants.BOTTOM_PILE_INDEX] = crown_pile[crown_index]
             crown_pile[crown_index] = temp
+
+    
+    def get_realm(self):
+        return self._data

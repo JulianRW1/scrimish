@@ -6,25 +6,24 @@ from realm import Realm
 
 class Attack:
 
-    attacker_realm = None
-    attack_pile = 100
+    pile:int
 
-    defender_realm = None
-    defense_pile = 100
+    defender = None
+    defense_pile:int
 
-    def __init__(self, attacker_realm: Realm, defender_realm: Realm, attack_pile: int, defense_pile: int):
-        self.attacker_realm = attacker_realm
-        self.attack_pile = attack_pile
+    def __init__(self, attacking_player, defending_player, attack_pile: int, defense_pile: int):
+        self.player = attacking_player
+        self.pile = attack_pile
 
-        self.defender_realm = defender_realm
+        self.defender = defending_player
         self.defense_pile = defense_pile
 
     
     # Returns the winner of the attack
     # Returns and
     def resolve_attack(self) -> AttackResult:
-        atk_type = self.attacker_realm.get(self.attack_pile, constants.TOP_PILE_INDEX).card_type
-        def_type = self.defender_realm.get(self.defense_pile, constants.TOP_PILE_INDEX).card_type
+        atk_type = self.player.realm.get(self.pile, constants.TOP_PILE_INDEX).card_type
+        def_type = self.defender.realm.get(self.defense_pile, constants.TOP_PILE_INDEX).card_type
 
         if CardType.is_standard(atk_type):
 
