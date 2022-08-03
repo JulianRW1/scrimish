@@ -50,8 +50,11 @@ const USE_COOKIES = false;
 window.addEventListener("DOMContentLoaded", () => {
     // Open WebSocket connection and register event handlers
 
-    // websocket = new WebSocket("ws://192.168.1.17:8001/"); 
-    websocket = new WebSocket("ws://localhost:8001/"); 
+    // websocket = new WebSocket("ws://localhost:8001/"); 
+    
+    websocket = new WebSocket(getWebSocketServer()); 
+
+    
 
 
     recieveEvents(websocket);
@@ -73,6 +76,16 @@ window.addEventListener("DOMContentLoaded", () => {
     //     send(new Disconnection());
     // }
 });
+
+function getWebSocketServer() {
+    if (window.location.host === "JulianRW1.github.io") {
+      return "wss://scrimish.herokuapp.com/";
+    } else if (window.location.host === "localhost:8000") {
+      return "ws://localhost:8001/";
+    } else {
+      throw new Error(`Unsupported host: ${window.location.host}`);
+    }
+}
 
 function initUI() {
     let params = new URLSearchParams(window.location.search);
