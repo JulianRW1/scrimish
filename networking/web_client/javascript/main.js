@@ -681,6 +681,7 @@ async function attack(attack_event) {
 
     // flip any previusly selected cards down
     if (selectedPile != -1) {
+        console.log("A card was already selected");
         let selectedCard = activeRealm[selectedPile][activeRealm[selectedPile].length - 1];
         flipCard(false, selectedPile, selectedCard);
     }
