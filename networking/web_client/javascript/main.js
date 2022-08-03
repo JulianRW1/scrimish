@@ -657,17 +657,17 @@ function flipCard(faceUp, pile, topCard) {
 
 async function attack(attack_event) {
     // attack_event = {player_color, att_pile, def_pile, losers}
-    let playerColor = attack_event.player_color;
+    let attackerColor = attack_event.player_color;
     let attPile = attack_event.att_pile;
     let defPile = attack_event.def_pile;
     let losers = attack_event.losers;
 
     let activeRealm
     let inactiveRealm
-    if (playerColor == 'r') {
+    if (attackerColor == 'r') {
         activeRealm = redRealm;
         inactiveRealm = blueRealm;
-    } else if (playerColor == 'b') {
+    } else if (attackerColor == 'b') {
         activeRealm = blueRealm;
         inactiveRealm = redRealm;
     } else {
@@ -681,7 +681,7 @@ async function attack(attack_event) {
 
     // flip any previusly selected cards down
     if (selectedPile != -1) {
-        console.log("A card was already selected");
+        console.log('selected pile: ' + selectedPile);
         let selectedCard = inactiveRealm[selectedPile][inactiveRealm[selectedPile].length - 1];
         console.log('selected card: ' + selectedCard);
         flipCard(false, selectedPile, selectedCard);
