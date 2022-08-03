@@ -1,7 +1,6 @@
 from cards.card_type import CardType
 import constants
 from moves.attack_result import AttackResult
-from realm import Realm
 
 
 class Attack:
