@@ -1,4 +1,3 @@
-from PIL import Image
 from alliance import Alliance
 import alliance
 from cards.card_type import CardType
