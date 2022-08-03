@@ -681,9 +681,7 @@ async function attack(attack_event) {
 
     // flip any previusly selected cards down
     if (selectedPile != -1) {
-        console.log('selected pile: ' + selectedPile);
         let selectedCard = inactiveRealm[selectedPile][inactiveRealm[selectedPile].length - 1];
-        console.log('selected card: ' + selectedCard);
         flipCard(false, selectedPile, selectedCard);
     }
 

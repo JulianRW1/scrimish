@@ -130,7 +130,7 @@ async def join(websocket, game_id, user_id):
     if (not USE_COOKIES):
         connected = []
 
-    websockets.broadcast(get_sockets_from_users(temp), json.dumps({'type': 'redirect', 'url': ('?setup=' + game_id)}))
+    websockets.broadcast(get_sockets_from_users(temp), json.dumps({'type': 'redirect', 'url': ('/?setup=' + game_id)}))
 
     
 
@@ -346,7 +346,7 @@ async def continue_to_game(websocket, game_id, user_id, realm):
         if (not USE_COOKIES):
             connected = []
 
-        websockets.broadcast(get_sockets_from_users(temp), json.dumps({'type': 'redirect', 'url': '?game=' + game_id}))
+        websockets.broadcast(get_sockets_from_users(temp), json.dumps({'type': 'redirect', 'url': '/?game=' + game_id}))
 
         # # send the player color
         # await websocket.send(json.dumps({'type': 'set', 'variable': 'playerColor', 'value': 'r'}))
