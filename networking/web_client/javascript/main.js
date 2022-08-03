@@ -80,7 +80,8 @@ function getWebSocketServer() {
     } else if (window.location.host === "localhost:8000") {
       return "ws://localhost:8001/";
     } else {
-      throw new Error('Unsupported host: ${window.location.host}');
+      //throw new Error('Unsupported host: ${window.location.host}');
+      console.log('Unsupported host: ' + window.location.host);
     }
 }
 
