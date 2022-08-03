@@ -1,0 +1,193 @@
+:root {
+    --card-scale: 5vw;
+    --card-width: calc(2.5*var(--card-scale));
+    --card-height: calc(3.5*var(--card-scale));
+
+/*  --setup-screen-card-scale: .8;
+    --setup-screen-card-width: calc(var(--setup-screen-card-scale) * var(--card-width));
+    --setup-screen-card-height: calc(var(--setup-screen-card-scale) * var(--card-height)); */
+    
+    /* --setup-screen-card-scale: 30px; */
+    --setup-screen-card-scale: 4vw;
+    --setup-screen-card-width: calc(2.5*var(--setup-screen-card-scale));
+    --setup-screen-card-height: calc(3.5*var(--setup-screen-card-scale));
+}
+
+.card {
+    width: var(--card-width);
+    height: var(--card-height);
+}
+
+.homepage {
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: center;
+    height: 100vh;
+    width: 100vw;
+    background-color: rgb(67, 159, 245);
+    text-align: center;
+}
+
+.leftHomeScreen {
+    display: flex;
+    flex-flow: column nowrap;
+    overflow-y: scroll;
+    height: 100%;
+    width: 70%;
+}
+.gamesPanel {
+    display: flex;
+    flex-flow: column nowrap;
+    height: 90%;
+    width: 100%;
+}
+
+.refreshGamesBtn {
+    width: 100px;
+    height: 30px;
+}
+
+.gameOptions {
+    display: flex;
+    flex-flow: row;
+    padding-left: 5vh;
+}
+
+table {
+    border-spacing: 0 4px;
+}
+
+td {
+    margin: 0px;
+    padding: 0px;
+    text-align: center;
+    background-color: rgba(0, 0, 0, .1);
+    padding-top: 30px;
+    padding-bottom: 30px;
+    cursor: pointer;
+}
+
+
+.rightHomeScreen {
+    display: flex;
+    flex-flow: column nowrap;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 30%;
+}
+
+.gameSettingsPanel {
+    display: flex;
+    flex-flow: column nowrap;
+    align-items: center;
+    justify-content: space-around;
+    height: 30%;
+    padding: 50px;
+}
+
+.createGameBtn, .findGameBtn {
+    background-color: aquamarine;
+    width: 150px;
+    height: 50px;
+    border-radius: 10px;
+}
+  
+.createGameBtn {
+    background-color: cyan;
+
+}
+
+.findGameBtn {
+    background-color: aquamarine;
+} 
+
+
+.setupScreen {
+    display: flex;
+    flex-flow: column nowrap;
+    width: 100vw;
+    height: 100vh;
+}
+
+.realmSetup {
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content:space-around;
+}
+
+.setupPileElement {
+    /* position: relative; */
+    display: flex;
+    flex-flow: column nowrap;
+    align-items: center;
+    width: 20%;
+    height: 100%;
+    padding: .25rem;
+    height: calc(100% + calc(var(--setup-screen-card-height) * .6));
+}
+
+.setupCardElement {
+
+    /* position: absolute; */
+    /* outline-style: solid;
+    outline-color: black; */
+    border-top: 1px solid #000; 
+    border-radius: 5px 5px 0px 0px;
+    background-color: rgb(128, 128, 128, 0.5);
+    width: var(--setup-screen-card-width);
+    height: calc(.4 * var(--setup-screen-card-height));
+}
+
+.availableCardsSetup {
+    overflow-x: scroll;
+    white-space: nowrap;
+    overflow-y: hidden;
+
+    max-width: 80%;
+    /* space the available cards out */
+    margin-top: calc(.7 * var(--setup-screen-card-height));
+    margin-left: auto;
+    margin-right: auto;
+
+    min-height: var(--setup-screen-card-height);
+}
+
+.setupCard {
+    width: var(--setup-screen-card-width);
+    height: var(--setup-screen-card-height);
+}
+
+.continueToGameBtn {
+    width: 10rem;
+    height: 2rem;
+    position: sticky;
+    bottom: 1rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+
+.board {
+    background-color: blue;
+    display: flex;
+    flex-flow:column nowrap;
+    justify-content: space-around;
+}
+
+.realm {
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: space-around;
+}
+
+.pile {
+    padding: 10px;
+}
+
+body {
+    background-color:rgb(48, 49, 49);
+    margin: 0px 0px;
+    padding: 0px 0px;
+    color: white;
+}
