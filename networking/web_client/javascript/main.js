@@ -683,6 +683,7 @@ async function attack(attack_event) {
     if (selectedPile != -1) {
         console.log("A card was already selected");
         let selectedCard = activeRealm[selectedPile][activeRealm[selectedPile].length - 1];
+        console.log('selected card: ' + selectedCard);
         flipCard(false, selectedPile, selectedCard);
     }
 
