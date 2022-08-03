@@ -50,9 +50,9 @@ const USE_COOKIES = false;
 window.addEventListener("DOMContentLoaded", () => {
     // Open WebSocket connection and register event handlers
 
-    // websocket = new WebSocket("ws://localhost:8001/"); 
+    websocket = new WebSocket("ws://localhost:8001/"); 
     
-    websocket = new WebSocket(getWebSocketServer()); 
+    //websocket = new WebSocket(getWebSocketServer()); 
 
     
 
