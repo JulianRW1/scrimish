@@ -1,1 +1,1 @@
-web: python app.py
+web: python scrimish_server.py
