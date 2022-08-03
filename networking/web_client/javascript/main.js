@@ -75,7 +75,7 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 function getWebSocketServer() {
-    if (window.location.host === "https://julianrw1.github.io/scrimish/networking/web_client/index.html") {
+    if (window.location.host === "julianrw1.github.io") {
       return "wss://scrimish.herokuapp.com/";
     } else if (window.location.host === "localhost:8000") {
       return "ws://localhost:8001/";
