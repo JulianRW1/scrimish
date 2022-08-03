@@ -78,10 +78,12 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 function getWebSocketServer() {
-    if (window.location.host === "https://julianrw1.github.io/scrimish/networking/web_client/index.html") {
+    if (window.location.host === "https://julianrw1.github.io/scrimish/") {
       return "wss://scrimish.herokuapp.com/";
     } else if (window.location.host === "localhost:8000") {
       return "ws://localhost:8001/";
+    } else if (window.location.host === "https://julianrw1.github.io/scrimish/networking/web_client/index.html") {
+        return "ws://localhost:8001";
     } else {
       throw new Error(`Unsupported host: ${window.location.host}`);
     }
